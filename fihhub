@@ -6,10 +6,6 @@ _G.antiAfk = false
 _G.autoFarm = false
 _G.flySpeed = 50
 
-local ToggleKey = Enum.KeyCode.LeftAlt
-local FlyKey = Enum.KeyCode.F
-local NoclipKey = Enum.KeyCode.N
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -45,7 +41,7 @@ MainTab:CreateToggle({
 
 MovementTab:CreateSection("Fly")
 local FlyToggle = MovementTab:CreateToggle({
-   Name = "Fly",
+   Name = "Fly F",
    CurrentValue = false,
    Callback = function(Value) _G.flyEnabled = Value end,
 })
@@ -58,39 +54,20 @@ MovementTab:CreateSlider({
    Callback = function(Value) _G.flySpeed = Value end,
 })
 
-MovementTab:CreateKeybind({
-   Name = "Key Fly",
-   CurrentKeybind = "F",
-   HoldToInteract = false,
-   Callback = function(Key) FlyKey = Key end,
-})
-
 MovementTab:CreateSection("Noclip")
 local NoclipToggle = MovementTab:CreateToggle({
-   Name = "Noclip",
+   Name = "Noclip N",
    CurrentValue = false,
    Callback = function(Value) _G.noclip = Value end,
 })
 
-MovementTab:CreateKeybind({
-   Name = "Key Noclip",
-   CurrentKeybind = "N",
-   HoldToInteract = false,
-   Callback = function(Key) NoclipKey = Key end,
-})
-
 SettingsTab:CreateSection("Menu")
-SettingsTab:CreateKeybind({
-   Name = "Key Menu",
-   CurrentKeybind = "LeftAlt",
-   HoldToInteract = false,
-   Callback = function(Key) ToggleKey = Key end,
-})
+SettingsTab:CreateLabel("Aperte Alt para Minimizar")
 
 CreditsTab:CreateSection("Owner")
 CreditsTab:CreateLabel("Slick1245")
 
--- Lógica do Fly (HD Admin)
+-- Lógica Fly HD Admin
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
@@ -119,7 +96,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Lógica do Noclip
+-- Lógica Noclip
 RunService.Stepped:Connect(function()
     if LocalPlayer.Character and _G.noclip then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -136,21 +113,21 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Sistema de Teclas (Anti-Bug)
+-- Sistema de Teclas Fixo (Sem Bug)
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     
-    if input.KeyCode == FlyKey then
+    if input.KeyCode == Enum.KeyCode.F then
         FlyToggle:Set(not _G.flyEnabled)
         Rayfield:Notify({Title = "Movement", Content = "Fly " .. (_G.flyEnabled and "On" or "Off"), Duration = 2})
     end
     
-    if input.KeyCode == NoclipKey then
+    if input.KeyCode == Enum.KeyCode.N then
         NoclipToggle:Set(not _G.noclip)
         Rayfield:Notify({Title = "Movement", Content = "Noclip " .. (_G.noclip and "On" or "Off"), Duration = 2})
     end
     
-    if input.KeyCode == ToggleKey then
+    if input.KeyCode == Enum.KeyCode.LeftAlt then
         local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
         if gui then gui.Enabled = not gui.Enabled end
     end
