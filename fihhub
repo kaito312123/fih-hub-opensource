@@ -24,7 +24,14 @@ local Window = Rayfield:CreateWindow({
    LoadingTitle = "FihHub Loading...",
    LoadingSubtitle = "by Slick1245",
    ConfigurationSaving = { Enabled = true, FolderName = "FihHubConfigs", FileName = "settings" },
-   KeySystem = false 
+   KeySystem = false -- Mantido desativado como pediste
+})
+
+-- Notificações de Inicialização (Como tinhas antes)
+Rayfield:Notify({
+   Title = "FihHub Loaded",
+   Content = "Welcome back, Slick1245!",
+   Duration = 5,
 })
 
 -- [[ TABS ]] --
@@ -41,17 +48,21 @@ MainTab:CreateToggle({
    Callback = function(Value) _G.tpEnabled = Value end,
 })
 
+MainTab:CreateSection("--- Protection ---")
 MainTab:CreateToggle({
    Name = "Anti-AFK",
    CurrentValue = false,
-   Callback = function(Value) _G.antiAfk = Value end,
+   Callback = function(Value) 
+      _G.antiAfk = Value 
+      Rayfield:Notify({Title = "System", Content = "Anti-AFK: "..tostring(Value), Duration = 2})
+   end,
 })
 
 -- [[ MOVEMENT TAB ]] --
-MovementTab:CreateSection("--- IY Fly System ---")
+MovementTab:CreateSection("--- HD Admin Fly Style ---")
 
 MovementTab:CreateToggle({
-   Name = "Fly Master Switch",
+   Name = "Fly Enabled",
    CurrentValue = false,
    Callback = function(Value) _G.flyEnabled = Value end,
 })
@@ -64,13 +75,7 @@ MovementTab:CreateSlider({
    Callback = function(Value) _G.flySpeed = Value end,
 })
 
-MovementTab:CreateKeybind({
-   Name = "Fly Keybind",
-   CurrentKeybind = "F",
-   Callback = function(Key) FlyKey = Key end,
-})
-
-MovementTab:CreateSection("--- Noclip ---")
+MovementTab:CreateSection("--- Controls ---")
 MovementTab:CreateKeybind({
    Name = "Noclip Keybind",
    CurrentKeybind = "N",
@@ -86,38 +91,51 @@ SettingsTab:CreateKeybind({
 
 -- [[ CREDITS TAB ]] --
 CreditsTab:CreateLabel("Owner: Slick1245")
-CreditsTab:CreateParagraph({Title = "Fly Controls", Content = "W/S: Forward/Back\nA/D: Left/Right\nSpace: Up\nL-Shift: Down"})
+CreditsTab:CreateParagraph({Title = "Fly Info", Content = "HD Admin Style: Smooth movement, no anchoring.\nUse W,A,S,D and Camera to steer."})
 
 --- [[ LOGIC LOOPS ]] ---
 
--- IY STYLE FLY LOGIC (Client-side)
+-- HD ADMIN STYLE FLY (Smooth BodyVelocity)
+local bv, bg
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
         local cam = workspace.CurrentCamera
-        local velocity = Vector3.new(0,0,0)
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then velocity = velocity + cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then velocity = velocity - cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then velocity = velocity - cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then velocity = velocity + cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then velocity = velocity + Vector3.new(0,1,0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then velocity = velocity - Vector3.new(0,1,0) end
-
-        root.Velocity = velocity * _G.flySpeed
         
-        -- Mantém o boneco reto e estável como no IY
-        if velocity.Magnitude > 0 then
-            root.Anchored = false
-        else
-            root.Anchored = true
+        -- Cria os forces se não existirem (estilo HD Admin)
+        if not root:FindFirstChild("FlyBV") then
+            bv = Instance.new("BodyVelocity", root)
+            bv.Name = "FlyBV"
+            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            
+            bg = Instance.new("BodyGyro", root)
+            bg.Name = "FlyBG"
+            bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+            bg.P = 9e4
         end
-    elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.Anchored = false
+        
+        local moveDir = Vector3.new(0,0,0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+        
+        root.FlyBV.Velocity = moveDir * _G.flySpeed
+        root.FlyBG.CFrame = cam.CFrame
+    else
+        -- Remove os forces quando desliga o fly
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            if LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyBV") then
+                LocalPlayer.Character.HumanoidRootPart.FlyBV:Destroy()
+            end
+            if LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyBG") then
+                LocalPlayer.Character.HumanoidRootPart.FlyBG:Destroy()
+            end
+        end
     end
 end)
 
--- Noclip Logic
+-- Noclip Logic (Client-side)
 RunService.Stepped:Connect(function()
     if _G.noclip and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -134,11 +152,17 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Inputs (Binds)
+-- Global Inputs
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode == FlyKey then _G.flyEnabled = not _G.flyEnabled end
-    if input.KeyCode == NoclipKey then _G.noclip = not _G.noclip end
+    if input.KeyCode == FlyKey then 
+        _G.flyEnabled = not _G.flyEnabled 
+        Rayfield:Notify({Title = "Movement", Content = "Fly: "..tostring(_G.flyEnabled), Duration = 2})
+    end
+    if input.KeyCode == NoclipKey then 
+        _G.noclip = not _G.noclip 
+        Rayfield:Notify({Title = "Movement", Content = "Noclip: "..tostring(_G.noclip), Duration = 2})
+    end
     if input.KeyCode == ToggleKey then
         local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
         if gui then gui.Enabled = not gui.Enabled end
