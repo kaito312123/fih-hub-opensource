@@ -87,6 +87,7 @@ SettingsTab:CreateKeybind({
 CreditsTab:CreateSection("Owner")
 CreditsTab:CreateLabel("Slick1245")
 
+-- LOGICA FLY (ESTILO HD ADMIN)
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
@@ -107,6 +108,7 @@ RunService.RenderStepped:Connect(function()
         bv.Velocity = moveDir * _G.flySpeed
         bg.CFrame = cam.CFrame
     else
+        -- REMOVE FLY AO DESATIVAR
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local root = LocalPlayer.Character.HumanoidRootPart
             if root:FindFirstChild("FlyBV") then root.FlyBV:Destroy() end
@@ -115,6 +117,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- LOGICA NOCLIP (PARA DE ATRAVESSAR QUANDO OFF)
 RunService.Stepped:Connect(function()
     if LocalPlayer.Character and _G.noclip then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -123,6 +126,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
+-- ANTI AFK
 LocalPlayer.Idled:Connect(function()
     if _G.antiAfk then
         VirtualUser:CaptureController()
@@ -130,18 +134,19 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
+-- GESTÃO DE TECLAS (CORRIGIDO)
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     
     if input.KeyCode == FlyKey then
         _G.flyEnabled = not _G.flyEnabled
-        FlyToggle:Set(_G.flyEnabled)
+        FlyToggle:Set(_G.flyEnabled) -- Força o menu a atualizar visualmente
         Rayfield:Notify({Title = "Movement", Content = "Fly " .. (_G.flyEnabled and "On" or "Off"), Duration = 2})
     end
     
     if input.KeyCode == NoclipKey then
         _G.noclip = not _G.noclip
-        NoclipToggle:Set(_G.noclip)
+        NoclipToggle:Set(_G.noclip) -- Força o menu a atualizar visualmente
         Rayfield:Notify({Title = "Movement", Content = "Noclip " .. (_G.noclip and "On" or "Off"), Duration = 2})
     end
     
