@@ -4,7 +4,6 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local NOME_DA_PART = "WINPART"
 _G.tpEnabled = false
 _G.noclip = false
-_G.infJump = false
 _G.flyEnabled = false
 _G.flySpeed = 50
 
@@ -18,38 +17,29 @@ local Window = Rayfield:CreateWindow({
    Name = "FihHub",
    LoadingTitle = "FihHub Loading...",
    LoadingSubtitle = "by Slick1245",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "FihHubConfigs",
-      FileName = "key"
+   ConfigurationSaving = { 
+      Enabled = true, 
+      FolderName = "FihHubConfigs", 
+      FileName = "key" 
    },
    KeySystem = true,
    KeySettings = {
       Title = "Security Access",
       Subtitle = "Key System",
-      Note = "Get key at: https://paste-bin.org/gfbqx9xw7q",
+      Note = "Enter the required key to continue",
       FileName = "key",
       SaveKey = true,
       GrabKeyFromSite = false,
-      Key = {"fuckingnigger"} 
+      Key = {"SlickKey123"} 
    }
-})
-
--- Copy Key Link
-setclipboard("https://paste-bin.org/gfbqx9xw7q")
-Rayfield:Notify({
-   Title = "System",
-   Content = "Key link copied to clipboard!",
-   Duration = 5,
 })
 
 -- [[ TABS ]] --
 local MainTab = Window:CreateTab("Main", 4483345998)
 local MovementTab = Window:CreateTab("Movement", 4483345998)
-local VisualTab = Window:CreateTab("Visuals", 4483345998)
 local CreditsTab = Window:CreateTab("Credits", 4483345998)
 
--- [[ MAIN TAB ]] --
+-- [[ MAIN ]] --
 MainTab:CreateSection("--- Farming ---")
 
 MainTab:CreateToggle({
@@ -69,33 +59,12 @@ MainTab:CreateInput({
    end,
 })
 
-MainTab:CreateButton({
-   Name = "Clear KillBricks",
-   Callback = function()
-      for _, v in pairs(game.Workspace:GetDescendants()) do
-         if v:IsA("BasePart") and (v.Name:lower():find("kill") or v.Name:lower():find("lava")) then
-            v:Destroy()
-         end
-      end
-   end,
-})
-
--- [[ MOVEMENT TAB ]] --
-MovementTab:CreateSection("--- Fly System ---")
-
-MovementTab:CreateToggle({
-   Name = "Fly Enabled",
-   CurrentValue = false,
-   Flag = "FlyToggle",
-   Callback = function(Value)
-      _G.flyEnabled = Value
-   end,
-})
+-- [[ MOVEMENT ]] --
+MovementTab:CreateSection("--- Flight & Physics ---")
 
 MovementTab:CreateKeybind({
-   Name = "Fly Keybind",
+   Name = "Fly Keybind (F)",
    CurrentKeybind = "F",
-   HoldToInteract = false,
    Flag = "FlyKey",
    Callback = function()
       _G.flyEnabled = not _G.flyEnabled
@@ -103,33 +72,9 @@ MovementTab:CreateKeybind({
    end,
 })
 
-MovementTab:CreateSlider({
-   Name = "Fly Speed",
-   Range = {10, 500},
-   Increment = 10,
-   Suffix = "Speed",
-   CurrentValue = 50,
-   Flag = "FlySpeed",
-   Callback = function(Value)
-      _G.flySpeed = Value
-   end,
-})
-
-MovementTab:CreateSection("--- Noclip & Physics ---")
-
-MovementTab:CreateToggle({
-   Name = "Noclip Enabled",
-   CurrentValue = false,
-   Flag = "NoclipToggle",
-   Callback = function(Value)
-      _G.noclip = Value
-   end,
-})
-
 MovementTab:CreateKeybind({
-   Name = "Noclip Keybind",
+   Name = "Noclip Keybind (N)",
    CurrentKeybind = "N",
-   HoldToInteract = false,
    Flag = "NoclipKey",
    Callback = function()
       _G.noclip = not _G.noclip
@@ -137,34 +82,17 @@ MovementTab:CreateKeybind({
    end,
 })
 
-MovementTab:CreateToggle({
-   Name = "Infinite Jump",
-   CurrentValue = false,
-   Flag = "InfJump",
-   Callback = function(Value)
-      _G.infJump = Value
-   end,
+-- [[ CREDITS ]] --
+CreditsTab:CreateSection("--- Information ---")
+CreditsTab:CreateLabel("Owner: Slick1245")
+CreditsTab:CreateParagraph({
+    Title = "Controls", 
+    Content = "Minimize/Open: [LEFT ALT]\nStatus: All scripts are client-side."
 })
-
--- [[ VISUALS & CREDITS ]] --
-VisualTab:CreateButton({
-   Name = "Highlight Players",
-   Callback = function()
-      for _, player in pairs(Players:GetPlayers()) do
-         if player ~= LocalPlayer and player.Character then
-            local h = Instance.new("Highlight", player.Character)
-            h.FillColor = Color3.fromRGB(0, 255, 150)
-         end
-      end
-   end,
-})
-
-CreditsTab:CreateLabel("Script by: Slick1245")
-CreditsTab:CreateParagraph({Title = "UI Controls", Content = "Press [LEFT ALT] to Minimize GUI."})
 
 -- [[ BACKEND LOGIC ]] --
 
--- Noclip Execution
+-- Noclip Logic (Client-side)
 RunService.Stepped:Connect(function()
     if _G.noclip and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -173,7 +101,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Fly Logic (Enhanced)
+-- Fly Logic
 task.spawn(function()
     while true do
         RunService.RenderStepped:Wait()
@@ -186,38 +114,16 @@ task.spawn(function()
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
             
             root.Velocity = moveDir * _G.flySpeed
-            root.Anchored = (moveDir == Vector3.new(0,0,0)) -- Fica parado no ar se não apertar nada
+            root.Anchored = (moveDir == Vector3.new(0,0,0))
         elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             LocalPlayer.Character.HumanoidRootPart.Anchored = false
         end
     end
 end)
 
--- Inf Jump
-UserInputService.JumpRequest:Connect(function()
-    if _G.infJump then LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping") end
-end)
-
--- Auto TP
-task.spawn(function()
-    while true do
-        if _G.tpEnabled then
-            pcall(function()
-                local target = game.Workspace:FindFirstChild(NOME_DA_PART, true)
-                if target and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    LocalPlayer.Character.HumanoidRootPart.CFrame = target.CFrame
-                end
-            end)
-        end
-        task.wait(0.5)
-    end
-end)
-
--- Open/Close GUI
+-- Alt Keybind to Toggle UI
 UserInputService.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == Enum.KeyCode.LeftAlt then
         local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
