@@ -2,6 +2,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ SETTINGS ]] --
 local NOME_DA_PART = "WINPART"
+local KEY_LINK = "https://paste-bin.org/gfbqx9xw7q"
 _G.tpEnabled = false
 _G.noclip = false
 _G.flyEnabled = false
@@ -17,22 +18,35 @@ local Window = Rayfield:CreateWindow({
    Name = "FihHub",
    LoadingTitle = "FihHub Loading...",
    LoadingSubtitle = "by Slick1245",
-   ConfigurationSaving = { 
-      Enabled = true, 
-      FolderName = "FihHubConfigs", 
-      FileName = "key" 
-   },
+   ConfigurationSaving = { Enabled = true, FolderName = "FihHubConfigs", FileName = "key" },
    KeySystem = true,
    KeySettings = {
       Title = "Security Access",
       Subtitle = "Key System",
-      Note = "Enter the required key to continue",
+      Note = "Check your clipboard for the link!",
       FileName = "key",
       SaveKey = true,
       GrabKeyFromSite = false,
       Key = {"SlickKey123"} 
    }
 })
+
+-- [[ FORCED CLIPBOARD FIX ]] --
+task.spawn(function()
+    -- Tenta copiar 5 vezes com intervalos para garantir que o executor processe
+    for i = 1, 5 do
+        pcall(function()
+            setclipboard(KEY_LINK)
+        end)
+        task.wait(2)
+    end
+    
+    Rayfield:Notify({
+       Title = "System",
+       Content = "Key link copied to clipboard! (Retry finished)",
+       Duration = 5,
+    })
+end)
 
 -- [[ TABS ]] --
 local MainTab = Window:CreateTab("Main", 4483345998)
@@ -41,84 +55,40 @@ local CreditsTab = Window:CreateTab("Credits", 4483345998)
 
 -- [[ MAIN ]] --
 MainTab:CreateSection("--- Farming ---")
-
 MainTab:CreateToggle({
    Name = "Auto Teleport",
    CurrentValue = false,
-   Flag = "ToggleTP",
-   Callback = function(Value)
-      _G.tpEnabled = Value
-   end,
-})
-
-MainTab:CreateInput({
-   Name = "Target Name",
-   PlaceholderText = "WINPART",
-   Callback = function(Text)
-      NOME_DA_PART = Text
-   end,
+   Callback = function(Value) _G.tpEnabled = Value end,
 })
 
 -- [[ MOVEMENT ]] --
-MovementTab:CreateSection("--- Flight & Physics ---")
-
+MovementTab:CreateSection("--- Binds ---")
 MovementTab:CreateKeybind({
-   Name = "Fly Keybind (F)",
+   Name = "Fly (F)",
    CurrentKeybind = "F",
-   Flag = "FlyKey",
-   Callback = function()
-      _G.flyEnabled = not _G.flyEnabled
-      Rayfield:Notify({Title = "Movement", Content = "Fly: " .. tostring(_G.flyEnabled), Duration = 2})
-   end,
+   Callback = function() _G.flyEnabled = not _G.flyEnabled end,
 })
 
 MovementTab:CreateKeybind({
-   Name = "Noclip Keybind (N)",
+   Name = "Noclip (N)",
    CurrentKeybind = "N",
-   Flag = "NoclipKey",
-   Callback = function()
-      _G.noclip = not _G.noclip
-      Rayfield:Notify({Title = "Movement", Content = "Noclip: " .. tostring(_G.noclip), Duration = 2})
-   end,
+   Callback = function() _G.noclip = not _G.noclip end,
 })
 
 -- [[ CREDITS ]] --
-CreditsTab:CreateSection("--- Information ---")
-CreditsTab:CreateLabel("Owner: Slick1245")
+CreditsTab:CreateSection("--- Owner ---")
+CreditsTab:CreateLabel("Script by: Slick1245")
 CreditsTab:CreateParagraph({
-    Title = "Controls", 
-    Content = "Minimize/Open: [LEFT ALT]\nStatus: All scripts are client-side."
+    Title = "Instructions", 
+    Content = "Key link is: " .. KEY_LINK .. "\nPress [LEFT ALT] to toggle UI."
 })
 
--- [[ BACKEND LOGIC ]] --
-
--- Noclip Logic (Client-side)
+-- [[ LOGIC ]] --
+-- Client-side Noclip Logic
 RunService.Stepped:Connect(function()
     if _G.noclip and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
             if v:IsA("BasePart") then v.CanCollide = false end
-        end
-    end
-end)
-
--- Fly Logic
-task.spawn(function()
-    while true do
-        RunService.RenderStepped:Wait()
-        if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local root = LocalPlayer.Character.HumanoidRootPart
-            local camera = workspace.CurrentCamera
-            local moveDir = Vector3.new(0,0,0)
-            
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
-            
-            root.Velocity = moveDir * _G.flySpeed
-            root.Anchored = (moveDir == Vector3.new(0,0,0))
-        elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.Anchored = false
         end
     end
 end)
