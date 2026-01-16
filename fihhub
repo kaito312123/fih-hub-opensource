@@ -31,7 +31,7 @@ local Window = Rayfield:CreateWindow({
       FileName = "key",
       SaveKey = true,
       GrabKeyFromSite = false,
-      Key = {"SlickKey123"} 
+      Key = {"fuckingnigger"} 
    }
 })
 
