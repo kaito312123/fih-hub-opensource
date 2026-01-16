@@ -1,6 +1,6 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- [[ SETTINGS ]] --
+-- [[ CONFIGURAÇÕES GERAIS ]] --
 local NOME_DA_PART = "WINPART"
 _G.tpEnabled = false
 _G.noclip = false
@@ -18,19 +18,19 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
--- [[ WINDOW CONFIG ]] --
+-- [[ JANELA PRINCIPAL ]] --
 local Window = Rayfield:CreateWindow({
    Name = "FihHub",
    LoadingTitle = "FihHub Loading...",
    LoadingSubtitle = "by Slick1245",
    ConfigurationSaving = { Enabled = true, FolderName = "FihHubConfigs", FileName = "settings" },
-   KeySystem = false -- Mantido desativado como pediste
+   KeySystem = false 
 })
 
--- Notificações de Inicialização (Como tinhas antes)
+-- Notificação Inicial
 Rayfield:Notify({
    Title = "FihHub Loaded",
-   Content = "Welcome back, Slick1245!",
+   Content = "Welcome, Slick1245!",
    Duration = 5,
 })
 
@@ -38,17 +38,10 @@ Rayfield:Notify({
 local MainTab = Window:CreateTab("Main", 4483345998)
 local MovementTab = Window:CreateTab("Movement", 4483345998)
 local SettingsTab = Window:CreateTab("Settings", 4483345998)
-local CreditsTab = Window:CreateTab("Credits", 4483345998)
 
 -- [[ MAIN TAB ]] --
-MainTab:CreateSection("--- Farming ---")
-MainTab:CreateToggle({
-   Name = "Auto Teleport",
-   CurrentValue = false,
-   Callback = function(Value) _G.tpEnabled = Value end,
-})
+MainTab:CreateSection("--- Farming & Safety ---")
 
-MainTab:CreateSection("--- Protection ---")
 MainTab:CreateToggle({
    Name = "Anti-AFK",
    CurrentValue = false,
@@ -59,12 +52,17 @@ MainTab:CreateToggle({
 })
 
 -- [[ MOVEMENT TAB ]] --
-MovementTab:CreateSection("--- HD Admin Fly Style ---")
+
+-- SEÇÃO DO FLY
+MovementTab:CreateSection("--- Fly (HD Admin Style) ---")
 
 MovementTab:CreateToggle({
-   Name = "Fly Enabled",
+   Name = "Fly Toggle",
    CurrentValue = false,
-   Callback = function(Value) _G.flyEnabled = Value end,
+   Callback = function(Value) 
+      _G.flyEnabled = Value 
+      Rayfield:Notify({Title = "Movement", Content = "Fly: "..tostring(Value), Duration = 2})
+   end,
 })
 
 MovementTab:CreateSlider({
@@ -75,39 +73,57 @@ MovementTab:CreateSlider({
    Callback = function(Value) _G.flySpeed = Value end,
 })
 
-MovementTab:CreateSection("--- Controls ---")
+MovementTab:CreateKeybind({
+   Name = "Fly Keybind",
+   CurrentKeybind = "F",
+   HoldToInteract = false,
+   Callback = function(Key) 
+      FlyKey = Key 
+      -- A caixa fecha automaticamente após a seleção no Rayfield
+   end,
+})
+
+-- SEÇÃO DO NOCLIP
+MovementTab:CreateSection("--- Noclip ---")
+
+MovementTab:CreateToggle({
+   Name = "Noclip Toggle",
+   CurrentValue = false,
+   Callback = function(Value) 
+      _G.noclip = Value 
+      Rayfield:Notify({Title = "Movement", Content = "Noclip: "..tostring(Value), Duration = 2})
+   end,
+})
+
 MovementTab:CreateKeybind({
    Name = "Noclip Keybind",
    CurrentKeybind = "N",
-   Callback = function(Key) NoclipKey = Key end,
+   HoldToInteract = false,
+   Callback = function(Key) 
+      NoclipKey = Key 
+   end,
 })
 
--- [[ SETTINGS TAB ]] --
+-- [[ SETTINGS ]] --
 SettingsTab:CreateKeybind({
    Name = "Menu Keybind",
    CurrentKeybind = "LeftAlt",
    Callback = function(Key) ToggleKey = Key end,
 })
 
--- [[ CREDITS TAB ]] --
-CreditsTab:CreateLabel("Owner: Slick1245")
-CreditsTab:CreateParagraph({Title = "Fly Info", Content = "HD Admin Style: Smooth movement, no anchoring.\nUse W,A,S,D and Camera to steer."})
+--- [[ LÓGICA DE BACKEND ]] ---
 
---- [[ LOGIC LOOPS ]] ---
-
--- HD ADMIN STYLE FLY (Smooth BodyVelocity)
+-- HD ADMIN FLY LOGIC
 local bv, bg
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
         local cam = workspace.CurrentCamera
         
-        -- Cria os forces se não existirem (estilo HD Admin)
         if not root:FindFirstChild("FlyBV") then
             bv = Instance.new("BodyVelocity", root)
             bv.Name = "FlyBV"
             bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-            
             bg = Instance.new("BodyGyro", root)
             bg.Name = "FlyBG"
             bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
@@ -123,19 +139,14 @@ RunService.RenderStepped:Connect(function()
         root.FlyBV.Velocity = moveDir * _G.flySpeed
         root.FlyBG.CFrame = cam.CFrame
     else
-        -- Remove os forces quando desliga o fly
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            if LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyBV") then
-                LocalPlayer.Character.HumanoidRootPart.FlyBV:Destroy()
-            end
-            if LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyBG") then
-                LocalPlayer.Character.HumanoidRootPart.FlyBG:Destroy()
-            end
+            if LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyBV") then LocalPlayer.Character.HumanoidRootPart.FlyBV:Destroy() end
+            if LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyBG") then LocalPlayer.Character.HumanoidRootPart.FlyBG:Destroy() end
         end
     end
 end)
 
--- Noclip Logic (Client-side)
+-- NOCLIP LOGIC
 RunService.Stepped:Connect(function()
     if _G.noclip and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -144,7 +155,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Anti-AFK
+-- ANTI-AFK LOGIC
 LocalPlayer.Idled:Connect(function()
     if _G.antiAfk then
         VirtualUser:CaptureController()
@@ -152,7 +163,7 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Global Inputs
+-- INPUTS
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == FlyKey then 
