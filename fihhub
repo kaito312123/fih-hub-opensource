@@ -1,11 +1,10 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ CONFIGURAÇÕES GERAIS ]] --
-local NOME_DA_PART = "WINPART"
-_G.tpEnabled = false
 _G.noclip = false
 _G.flyEnabled = false
 _G.antiAfk = false
+_G.autoFarm = false
 _G.flySpeed = 50
 
 local ToggleKey = Enum.KeyCode.LeftAlt
@@ -27,10 +26,10 @@ local Window = Rayfield:CreateWindow({
    KeySystem = false 
 })
 
--- Notificação Inicial
+-- Notificação de Inicialização
 Rayfield:Notify({
    Title = "FihHub Loaded",
-   Content = "Welcome, Slick1245!",
+   Content = "Script by Slick1245 pronto para uso!",
    Duration = 5,
 })
 
@@ -40,7 +39,18 @@ local MovementTab = Window:CreateTab("Movement", 4483345998)
 local SettingsTab = Window:CreateTab("Settings", 4483345998)
 
 -- [[ MAIN TAB ]] --
-MainTab:CreateSection("--- Farming & Safety ---")
+MainTab:CreateSection("--- Farming ---")
+
+MainTab:CreateToggle({
+   Name = "Auto Farm (Ativar)",
+   CurrentValue = false,
+   Callback = function(Value) 
+      _G.autoFarm = Value 
+      Rayfield:Notify({Title = "Farm", Content = "Auto Farm status: "..tostring(Value), Duration = 2})
+   end,
+})
+
+MainTab:CreateSection("--- Protection ---")
 
 MainTab:CreateToggle({
    Name = "Anti-AFK",
@@ -53,16 +63,12 @@ MainTab:CreateToggle({
 
 -- [[ MOVEMENT TAB ]] --
 
--- SEÇÃO DO FLY
-MovementTab:CreateSection("--- Fly (HD Admin Style) ---")
+MovementTab:CreateSection("--- Fly (HD Style) ---")
 
 MovementTab:CreateToggle({
-   Name = "Fly Toggle",
+   Name = "Enable Fly",
    CurrentValue = false,
-   Callback = function(Value) 
-      _G.flyEnabled = Value 
-      Rayfield:Notify({Title = "Movement", Content = "Fly: "..tostring(Value), Duration = 2})
-   end,
+   Callback = function(Value) _G.flyEnabled = Value end,
 })
 
 MovementTab:CreateSlider({
@@ -76,14 +82,9 @@ MovementTab:CreateSlider({
 MovementTab:CreateKeybind({
    Name = "Fly Keybind",
    CurrentKeybind = "F",
-   HoldToInteract = false,
-   Callback = function(Key) 
-      FlyKey = Key 
-      -- A caixa fecha automaticamente após a seleção no Rayfield
-   end,
+   Callback = function(Key) FlyKey = Key end,
 })
 
--- SEÇÃO DO NOCLIP
 MovementTab:CreateSection("--- Noclip ---")
 
 MovementTab:CreateToggle({
@@ -98,37 +99,25 @@ MovementTab:CreateToggle({
 MovementTab:CreateKeybind({
    Name = "Noclip Keybind",
    CurrentKeybind = "N",
-   HoldToInteract = false,
-   Callback = function(Key) 
-      NoclipKey = Key 
-   end,
+   Callback = function(Key) NoclipKey = Key end,
 })
 
--- [[ SETTINGS ]] --
-SettingsTab:CreateKeybind({
-   Name = "Menu Keybind",
-   CurrentKeybind = "LeftAlt",
-   Callback = function(Key) ToggleKey = Key end,
-})
+-- [[ LÓGICA DE BACKEND ]] --
 
---- [[ LÓGICA DE BACKEND ]] ---
-
--- HD ADMIN FLY LOGIC
-local bv, bg
+-- Fly Logic (Cai no chão sem Ragdoll ao desativar)
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
         local cam = workspace.CurrentCamera
         
-        if not root:FindFirstChild("FlyBV") then
-            bv = Instance.new("BodyVelocity", root)
-            bv.Name = "FlyBV"
-            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-            bg = Instance.new("BodyGyro", root)
-            bg.Name = "FlyBG"
-            bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-            bg.P = 9e4
-        end
+        local bv = root:FindFirstChild("FlyBV") or Instance.new("BodyVelocity", root)
+        bv.Name = "FlyBV"
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        
+        local bg = root:FindFirstChild("FlyBG") or Instance.new("BodyGyro", root)
+        bg.Name = "FlyBG"
+        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.P = 9e4
         
         local moveDir = Vector3.new(0,0,0)
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
@@ -136,26 +125,34 @@ RunService.RenderStepped:Connect(function()
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
         
-        root.FlyBV.Velocity = moveDir * _G.flySpeed
-        root.FlyBG.CFrame = cam.CFrame
+        bv.Velocity = moveDir * _G.flySpeed
+        bg.CFrame = cam.CFrame
     else
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            if LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyBV") then LocalPlayer.Character.HumanoidRootPart.FlyBV:Destroy() end
-            if LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyBG") then LocalPlayer.Character.HumanoidRootPart.FlyBG:Destroy() end
+            local root = LocalPlayer.Character.HumanoidRootPart
+            if root:FindFirstChild("FlyBV") then root.FlyBV:Destroy() end
+            if root:FindFirstChild("FlyBG") then root.FlyBG:Destroy() end
         end
     end
 end)
 
--- NOCLIP LOGIC
+-- Noclip Logic (Correção para desativar mesmo)
 RunService.Stepped:Connect(function()
-    if _G.noclip and LocalPlayer.Character then
+    if LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
+            if v:IsA("BasePart") then
+                if _G.noclip then
+                    v.CanCollide = false
+                else
+                    -- No modo desativado, o Roblox volta às colisões originais do mapa
+                    -- Não forçamos true para não bugar o chão do jogo
+                end
+            end
         end
     end
 end)
 
--- ANTI-AFK LOGIC
+-- Anti-AFK Logic
 LocalPlayer.Idled:Connect(function()
     if _G.antiAfk then
         VirtualUser:CaptureController()
@@ -163,17 +160,11 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- INPUTS
+-- Inputs e Binds
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode == FlyKey then 
-        _G.flyEnabled = not _G.flyEnabled 
-        Rayfield:Notify({Title = "Movement", Content = "Fly: "..tostring(_G.flyEnabled), Duration = 2})
-    end
-    if input.KeyCode == NoclipKey then 
-        _G.noclip = not _G.noclip 
-        Rayfield:Notify({Title = "Movement", Content = "Noclip: "..tostring(_G.noclip), Duration = 2})
-    end
+    if input.KeyCode == FlyKey then _G.flyEnabled = not _G.flyEnabled end
+    if input.KeyCode == NoclipKey then _G.noclip = not _G.noclip end
     if input.KeyCode == ToggleKey then
         local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
         if gui then gui.Enabled = not gui.Enabled end
