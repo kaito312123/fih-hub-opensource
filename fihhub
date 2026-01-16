@@ -61,6 +61,7 @@ MovementTab:CreateSlider({
 MovementTab:CreateKeybind({
    Name = "Key Fly",
    CurrentKeybind = "F",
+   HoldToInteract = false,
    Callback = function(Key) FlyKey = Key end,
 })
 
@@ -74,6 +75,7 @@ local NoclipToggle = MovementTab:CreateToggle({
 MovementTab:CreateKeybind({
    Name = "Key Noclip",
    CurrentKeybind = "N",
+   HoldToInteract = false,
    Callback = function(Key) NoclipKey = Key end,
 })
 
@@ -81,13 +83,14 @@ SettingsTab:CreateSection("Menu")
 SettingsTab:CreateKeybind({
    Name = "Key Menu",
    CurrentKeybind = "LeftAlt",
+   HoldToInteract = false,
    Callback = function(Key) ToggleKey = Key end,
 })
 
 CreditsTab:CreateSection("Owner")
 CreditsTab:CreateLabel("Slick1245")
 
--- LOGICA FLY (ESTILO HD ADMIN)
+-- Lógica do Fly (HD Admin)
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
@@ -108,7 +111,6 @@ RunService.RenderStepped:Connect(function()
         bv.Velocity = moveDir * _G.flySpeed
         bg.CFrame = cam.CFrame
     else
-        -- REMOVE FLY AO DESATIVAR
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local root = LocalPlayer.Character.HumanoidRootPart
             if root:FindFirstChild("FlyBV") then root.FlyBV:Destroy() end
@@ -117,7 +119,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- LOGICA NOCLIP (PARA DE ATRAVESSAR QUANDO OFF)
+-- Lógica do Noclip
 RunService.Stepped:Connect(function()
     if LocalPlayer.Character and _G.noclip then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -126,7 +128,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ANTI AFK
+-- Anti AFK
 LocalPlayer.Idled:Connect(function()
     if _G.antiAfk then
         VirtualUser:CaptureController()
@@ -134,19 +136,17 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- GESTÃO DE TECLAS (CORRIGIDO)
+-- Sistema de Teclas (Anti-Bug)
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     
     if input.KeyCode == FlyKey then
-        _G.flyEnabled = not _G.flyEnabled
-        FlyToggle:Set(_G.flyEnabled) -- Força o menu a atualizar visualmente
+        FlyToggle:Set(not _G.flyEnabled)
         Rayfield:Notify({Title = "Movement", Content = "Fly " .. (_G.flyEnabled and "On" or "Off"), Duration = 2})
     end
     
     if input.KeyCode == NoclipKey then
-        _G.noclip = not _G.noclip
-        NoclipToggle:Set(_G.noclip) -- Força o menu a atualizar visualmente
+        NoclipToggle:Set(not _G.noclip)
         Rayfield:Notify({Title = "Movement", Content = "Noclip " .. (_G.noclip and "On" or "Off"), Duration = 2})
     end
     
