@@ -18,7 +18,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local Window = Rayfield:CreateWindow({
    Name = "FihHub",
-   LoadingTitle = "FihHub Loading",
+   LoadingTitle = "FihHub",
    LoadingSubtitle = "by Slick1245",
    ConfigurationSaving = { Enabled = true, FolderName = "FihHubConfigs", FileName = "settings" },
    KeySystem = false 
@@ -27,50 +27,31 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Main", 4483345998)
 local MovementTab = Window:CreateTab("Movement", 4483345998)
 local SettingsTab = Window:CreateTab("Settings", 4483345998)
+local CreditsTab = Window:CreateTab("Credits", 4483345998)
 
-MainTab:CreateSection("Farming")
-
+MainTab:CreateSection("Farm")
 MainTab:CreateToggle({
    Name = "Auto Farm",
    CurrentValue = false,
-   Callback = function(Value) 
-      _G.autoFarm = Value 
-      Rayfield:Notify({Title = "Farm", Content = "Auto Farm " .. tostring(Value), Duration = 2})
-   end,
+   Callback = function(Value) _G.autoFarm = Value end,
 })
 
-MainTab:CreateSection("Protection")
-
+MainTab:CreateSection("Security")
 MainTab:CreateToggle({
    Name = "Anti AFK",
    CurrentValue = false,
-   Callback = function(Value) 
-      _G.antiAfk = Value 
-      Rayfield:Notify({Title = "System", Content = "Anti AFK " .. tostring(Value), Duration = 2})
-   end,
+   Callback = function(Value) _G.antiAfk = Value end,
 })
 
-MovementTab:CreateSection("Fly e Noclip")
-
-MovementTab:CreateToggle({
+MovementTab:CreateSection("Fly")
+local FlyToggle = MovementTab:CreateToggle({
    Name = "Fly",
    CurrentValue = false,
-   Flag = "FlyToggle",
    Callback = function(Value) _G.flyEnabled = Value end,
 })
 
-MovementTab:CreateToggle({
-   Name = "Noclip",
-   CurrentValue = false,
-   Flag = "NoclipToggle",
-   Callback = function(Value) 
-      _G.noclip = Value 
-      Rayfield:Notify({Title = "Movement", Content = "Noclip " .. tostring(Value), Duration = 2})
-   end,
-})
-
 MovementTab:CreateSlider({
-   Name = "Fly Speed",
+   Name = "Speed",
    Range = {10, 500},
    Increment = 10,
    CurrentValue = 50,
@@ -78,58 +59,43 @@ MovementTab:CreateSlider({
 })
 
 MovementTab:CreateKeybind({
-   Name = "Fly Keybind",
+   Name = "Key Fly",
    CurrentKeybind = "F",
-   Callback = function(Key)
-      FlyKey = Key
-   end,
+   Callback = function(Key) FlyKey = Key end,
+})
+
+MovementTab:CreateSection("Noclip")
+local NoclipToggle = MovementTab:CreateToggle({
+   Name = "Noclip",
+   CurrentValue = false,
+   Callback = function(Value) _G.noclip = Value end,
 })
 
 MovementTab:CreateKeybind({
-   Name = "Noclip Keybind",
+   Name = "Key Noclip",
    CurrentKeybind = "N",
-   Callback = function(Key)
-      NoclipKey = Key
-   end,
+   Callback = function(Key) NoclipKey = Key end,
 })
 
--- Lógica de Colisão do Noclip
-RunService.Stepped:Connect(function()
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                if _G.noclip then
-                    part.CanCollide = false
-                else
-                    if part.Name == "HumanoidRootPart" or part.Name == "UpperTorso" or part.Name == "LowerTorso" or part.Name == "Torso" then
-                        part.CanCollide = true
-                    end
-                end
-            end
-        end
-    end
-end)
+SettingsTab:CreateSection("Menu")
+SettingsTab:CreateKeybind({
+   Name = "Key Menu",
+   CurrentKeybind = "LeftAlt",
+   Callback = function(Key) ToggleKey = Key end,
+})
 
--- Lógica Anti-AFK Ultra
-LocalPlayer.Idled:Connect(function()
-    if _G.antiAfk then
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end
-end)
+CreditsTab:CreateSection("Owner")
+CreditsTab:CreateLabel("Slick1245")
 
--- Lógica do Fly (HD Admin)
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
         local cam = workspace.CurrentCamera
-        
         local bv = root:FindFirstChild("FlyBV") or Instance.new("BodyVelocity", root)
-        bv.Name = "Fly"
+        bv.Name = "FlyBV"
         bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        
         local bg = root:FindFirstChild("FlyBG") or Instance.new("BodyGyro", root)
-        bg.Name = "Fly"
+        bg.Name = "FlyBG"
         bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
         bg.P = 9e4
         
@@ -138,7 +104,6 @@ RunService.RenderStepped:Connect(function()
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-        
         bv.Velocity = moveDir * _G.flySpeed
         bg.CFrame = cam.CFrame
     else
@@ -150,20 +115,34 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Gestão de Inputs (Teclas de Atalho)
+RunService.Stepped:Connect(function()
+    if LocalPlayer.Character and _G.noclip then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+end)
+
+LocalPlayer.Idled:Connect(function()
+    if _G.antiAfk then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     
     if input.KeyCode == FlyKey then
         _G.flyEnabled = not _G.flyEnabled
-        Window.Flags.FlyToggle:Set(_G.flyEnabled) -- Atualiza o botão no menu
-        Rayfield:Notify({Title = "Movement", Content = "Fly " .. tostring(_G.flyEnabled), Duration = 2})
+        FlyToggle:Set(_G.flyEnabled)
+        Rayfield:Notify({Title = "Movement", Content = "Fly " .. (_G.flyEnabled and "On" or "Off"), Duration = 2})
     end
     
     if input.KeyCode == NoclipKey then
         _G.noclip = not _G.noclip
-        Window.Flags.NoclipToggle:Set(_G.noclip) -- Atualiza o botão no menu
-        Rayfield:Notify({Title = "Movement", Content = "Noclip " .. tostring(_G.noclip), Duration = 2})
+        NoclipToggle:Set(_G.noclip)
+        Rayfield:Notify({Title = "Movement", Content = "Noclip " .. (_G.noclip and "On" or "Off"), Duration = 2})
     end
     
     if input.KeyCode == ToggleKey then
