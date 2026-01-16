@@ -1,156 +1,97 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- [[ CONFIGURAÇÕES GERAIS ]] --
+local NOME_DA_PART = "WINPART"
+local ALTURA_OFFSET = 7-- Agora 6 studs acima
+local INTERVALO = 1   -- Verificação a cada 1.3 segundos
 
-_G.noclip = false
-_G.flyEnabled = false
-_G.antiAfk = false
-_G.autoFarm = false
-_G.flySpeed = 50
+local tpLigado = false
+local afkLigado = false
 
+-- [[ SERVIÇOS ]] --
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
-local Window = Rayfield:CreateWindow({
-   Name = "FihHub",
-   LoadingTitle = "FihHub",
-   LoadingSubtitle = "by Slick1245",
-   ConfigurationSaving = { Enabled = true, FolderName = "FihHubConfigs", FileName = "settings" },
-   KeySystem = false 
-})
+-- [[ INTERFACE ]] --
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BunniSimpleHub"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local MainTab = Window:CreateTab("Main", 4483345998)
-local MovementTab = Window:CreateTab("Movement", 4483345998)
-local SettingsTab = Window:CreateTab("Settings", 4483345998)
-local CreditsTab = Window:CreateTab("Credits", 4483345998)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 180, 0, 110)
+mainFrame.Position = UDim2.new(0.5, -90, 0.2, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true 
+mainFrame.Parent = screenGui
 
-MainTab:CreateSection("Farm")
+local tpBtn = Instance.new("TextButton")
+tpBtn.Size = UDim2.new(0.9, 0, 0, 35)
+tpBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+tpBtn.Text = "TP (6 STUDS): OFF"
+tpBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpBtn.Parent = mainFrame
 
-MainTab:CreateToggle({
-   Name = "Auto Farm Win",
-   CurrentValue = false,
-   Callback = function(Value) 
-      _G.autoFarm = Value 
-   end,
-})
+local afkBtn = Instance.new("TextButton")
+afkBtn.Size = UDim2.new(0.9, 0, 0, 35)
+afkBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
+afkBtn.Text = "ANTI-AFK: OFF"
+afkBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+afkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+afkBtn.Parent = mainFrame
 
-MainTab:CreateSection("Security")
-
-MainTab:CreateToggle({
-   Name = "Anti AFK",
-   CurrentValue = false,
-   Callback = function(Value) _G.antiAfk = Value end,
-})
-
-MovementTab:CreateSection("Fly")
-
-local FlyToggle = MovementTab:CreateToggle({
-   Name = "Fly F",
-   CurrentValue = false,
-   Callback = function(Value) _G.flyEnabled = Value end,
-})
-
-MovementTab:CreateSlider({
-   Name = "Speed",
-   Range = {10, 500},
-   Increment = 10,
-   CurrentValue = 50,
-   Callback = function(Value) _G.flySpeed = Value end,
-})
-
-MovementTab:CreateSection("Noclip")
-
-local NoclipToggle = MovementTab:CreateToggle({
-   Name = "Noclip N",
-   CurrentValue = false,
-   Callback = function(Value) _G.noclip = Value end,
-})
-
-SettingsTab:CreateSection("Menu")
-SettingsTab:CreateLabel("Alt para fechar")
-
-CreditsTab:CreateSection("Owner")
-CreditsTab:CreateLabel("Slick1245")
-
--- LÓGICA AUTO FARM (VERIFICA WINPART A CADA 1 SEGUNDO)
-spawn(function()
-    while true do
-        task.wait(1) -- Verifica a cada segundo exato
-        if _G.autoFarm then
-            pcall(function()
-                local character = LocalPlayer.Character
-                if character and character:FindFirstChild("HumanoidRootPart") then
-                    local targetPart = workspace:FindFirstChild("WINPART", true) -- Busca profunda pela WINPART
-                    
-                    if targetPart and targetPart:IsA("BasePart") then
-                        -- Teleporta 7 studs acima da WINPART
-                        character.HumanoidRootPart.CFrame = targetPart.CFrame * CFrame.new(0, 7, 0)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- LÓGICA FLY HD
-RunService.RenderStepped:Connect(function()
-    if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local root = LocalPlayer.Character.HumanoidRootPart
-        local cam = workspace.CurrentCamera
-        local bv = root:FindFirstChild("FlyBV") or Instance.new("BodyVelocity", root)
-        bv.Name = "FlyBV"
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        local bg = root:FindFirstChild("FlyBG") or Instance.new("BodyGyro", root)
-        bg.Name = "FlyBG"
-        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-        
-        local moveDir = Vector3.new(0,0,0)
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-        bv.Velocity = moveDir * _G.flySpeed
-        bg.CFrame = cam.CFrame
-    else
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local root = LocalPlayer.Character.HumanoidRootPart
-            if root:FindFirstChild("FlyBV") then root.FlyBV:Destroy() end
-            if root:FindFirstChild("FlyBG") then root.FlyBG:Destroy() end
-        end
-    end
-end)
-
--- LÓGICA NOCLIP
-RunService.Stepped:Connect(function()
-    if LocalPlayer.Character and _G.noclip then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end
-end)
-
--- ANTI AFK
+-- [[ LÓGICA ANTI-AFK ]] --
 LocalPlayer.Idled:Connect(function()
-    if _G.antiAfk then
+    if afkLigado then
         VirtualUser:CaptureController()
         VirtualUser:ClickButton2(Vector2.new())
     end
 end)
 
--- TECLAS FIXAS (F, N, ALT)
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        FlyToggle:Set(not _G.flyEnabled)
-    end
-    if input.KeyCode == Enum.KeyCode.N then
-        NoclipToggle:Set(not _G.noclip)
-    end
-    if input.KeyCode == Enum.KeyCode.LeftAlt then
-        local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
-        if gui then gui.Enabled = not gui.Enabled end
+-- [[ LÓGICA DOS BOTÕES ]] --
+tpBtn.MouseButton1Click:Connect(function()
+    tpLigado = not tpLigado
+    tpBtn.Text = tpLigado and "TP: LIGADO" or "TP (6 STUDS): OFF"
+    tpBtn.BackgroundColor3 = tpLigado and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+afkBtn.MouseButton1Click:Connect(function()
+    afkLigado = not afkLigado
+    afkBtn.Text = afkLigado and "AFK: ON" or "ANTI-AFK: OFF"
+    afkBtn.BackgroundColor3 = afkLigado and Color3.fromRGB(0, 100, 150) or Color3.fromRGB(60, 60, 60)
+end)
+
+-- [[ LOOP DE TELEPORTE DIRETO ]] --
+task.spawn(function()
+    while true do
+        if tpLigado then
+            pcall(function()
+                local target = nil
+                -- Busca a peça no Workspace
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj.Name == NOME_DA_PART and obj:IsA("BasePart") then
+                        target = obj
+                        break
+                    end
+                end
+
+                if target then
+                    local char = LocalPlayer.Character
+                    local root = char and char:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        -- Teleporte seco: Alvo + 6 studs de altura
+                        root.CFrame = target.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
+                        -- Zera velocidade para evitar drift
+                        root.Velocity = Vector3.new(0, 0, 0)
+                    end
+                end
+            end)
+        end
+        task.wait(INTERVALO)
     end
 end)
 
-Rayfield:LoadConfiguration()
+print("nigger hub load")
