@@ -31,7 +31,7 @@ local SettingsTab = Window:CreateTab("Settings", 4483345998)
 MainTab:CreateSection("Farming")
 
 MainTab:CreateToggle({
-   Name = "Auto Farm Siga",
+   Name = "Auto Farm",
    CurrentValue = false,
    Callback = function(Value) 
       _G.autoFarm = Value 
@@ -42,7 +42,7 @@ MainTab:CreateToggle({
 MainTab:CreateSection("Protection")
 
 MainTab:CreateToggle({
-   Name = "Anti AFK Ultra",
+   Name = "Anti AFK",
    CurrentValue = false,
    Callback = function(Value) 
       _G.antiAfk = Value 
@@ -53,14 +53,16 @@ MainTab:CreateToggle({
 MovementTab:CreateSection("Fly e Noclip")
 
 MovementTab:CreateToggle({
-   Name = "Fly Master",
+   Name = "Fly",
    CurrentValue = false,
+   Flag = "FlyToggle",
    Callback = function(Value) _G.flyEnabled = Value end,
 })
 
 MovementTab:CreateToggle({
-   Name = "Noclip Master",
+   Name = "Noclip",
    CurrentValue = false,
+   Flag = "NoclipToggle",
    Callback = function(Value) 
       _G.noclip = Value 
       Rayfield:Notify({Title = "Movement", Content = "Noclip " .. tostring(Value), Duration = 2})
@@ -78,15 +80,20 @@ MovementTab:CreateSlider({
 MovementTab:CreateKeybind({
    Name = "Fly Keybind",
    CurrentKeybind = "F",
-   Callback = function(Key) FlyKey = Key end,
+   Callback = function(Key)
+      FlyKey = Key
+   end,
 })
 
 MovementTab:CreateKeybind({
    Name = "Noclip Keybind",
    CurrentKeybind = "N",
-   Callback = function(Key) NoclipKey = Key end,
+   Callback = function(Key)
+      NoclipKey = Key
+   end,
 })
 
+-- Lógica de Colisão do Noclip
 RunService.Stepped:Connect(function()
     if LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -103,15 +110,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-local GC = getconnections or get_signal_cons
-if GC then
-    for i,v in pairs(GC(LocalPlayer.Idled)) do
-        if v["Disable"] then v["Disable"](v)
-        elseif v["Disconnect"] then v["Disconnect"](v)
-        end
-    end
-end
-
+-- Lógica Anti-AFK Ultra
 LocalPlayer.Idled:Connect(function()
     if _G.antiAfk then
         VirtualUser:CaptureController()
@@ -119,17 +118,18 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
+-- Lógica do Fly (HD Admin)
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
         local cam = workspace.CurrentCamera
         
         local bv = root:FindFirstChild("FlyBV") or Instance.new("BodyVelocity", root)
-        bv.Name = "FlyBV"
+        bv.Name = "Fly"
         bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
         
         local bg = root:FindFirstChild("FlyBG") or Instance.new("BodyGyro", root)
-        bg.Name = "FlyBG"
+        bg.Name = "Fly"
         bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
         bg.P = 9e4
         
@@ -150,10 +150,22 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Gestão de Inputs (Teclas de Atalho)
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode == FlyKey then _G.flyEnabled = not _G.flyEnabled end
-    if input.KeyCode == NoclipKey then _G.noclip = not _G.noclip end
+    
+    if input.KeyCode == FlyKey then
+        _G.flyEnabled = not _G.flyEnabled
+        Window.Flags.FlyToggle:Set(_G.flyEnabled) -- Atualiza o botão no menu
+        Rayfield:Notify({Title = "Movement", Content = "Fly " .. tostring(_G.flyEnabled), Duration = 2})
+    end
+    
+    if input.KeyCode == NoclipKey then
+        _G.noclip = not _G.noclip
+        Window.Flags.NoclipToggle:Set(_G.noclip) -- Atualiza o botão no menu
+        Rayfield:Notify({Title = "Movement", Content = "Noclip " .. tostring(_G.noclip), Duration = 2})
+    end
+    
     if input.KeyCode == ToggleKey then
         local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
         if gui then gui.Enabled = not gui.Enabled end
