@@ -25,21 +25,28 @@ local MovementTab = Window:CreateTab("Movement", 4483345998)
 local SettingsTab = Window:CreateTab("Settings", 4483345998)
 local CreditsTab = Window:CreateTab("Credits", 4483345998)
 
+-- PRIMEIRA ABA (MAIN)
 MainTab:CreateSection("Farm")
+
 MainTab:CreateToggle({
    Name = "Auto Farm",
    CurrentValue = false,
-   Callback = function(Value) _G.autoFarm = Value end,
+   Callback = function(Value) 
+      _G.autoFarm = Value 
+   end,
 })
 
 MainTab:CreateSection("Security")
+
 MainTab:CreateToggle({
    Name = "Anti AFK",
    CurrentValue = false,
    Callback = function(Value) _G.antiAfk = Value end,
 })
 
+-- SEGUNDA ABA (MOVEMENT)
 MovementTab:CreateSection("Fly")
+
 local FlyToggle = MovementTab:CreateToggle({
    Name = "Fly F",
    CurrentValue = false,
@@ -55,19 +62,37 @@ MovementTab:CreateSlider({
 })
 
 MovementTab:CreateSection("Noclip")
+
 local NoclipToggle = MovementTab:CreateToggle({
    Name = "Noclip N",
    CurrentValue = false,
    Callback = function(Value) _G.noclip = Value end,
 })
 
+-- OUTRAS ABAS
 SettingsTab:CreateSection("Menu")
-SettingsTab:CreateLabel("Aperte Alt para Minimizar")
+SettingsTab:CreateLabel("Alt para fechar")
 
 CreditsTab:CreateSection("Owner")
 CreditsTab:CreateLabel("Slick1245")
 
--- Lógica Fly HD Admin
+-- LOGICA AUTO FARM
+spawn(function()
+    while task.wait() do
+        if _G.autoFarm then
+            pcall(function()
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("TouchTransmitter") and _G.autoFarm then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = v.Parent.CFrame
+                        task.wait(0.1)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- LOGICA FLY (CAI SEM RAGDOLL)
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
@@ -78,7 +103,6 @@ RunService.RenderStepped:Connect(function()
         local bg = root:FindFirstChild("FlyBG") or Instance.new("BodyGyro", root)
         bg.Name = "FlyBG"
         bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-        bg.P = 9e4
         
         local moveDir = Vector3.new(0,0,0)
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
@@ -96,7 +120,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Lógica Noclip
+-- LOGICA NOCLIP
 RunService.Stepped:Connect(function()
     if LocalPlayer.Character and _G.noclip then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -105,7 +129,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Anti AFK
+-- ANTI AFK
 LocalPlayer.Idled:Connect(function()
     if _G.antiAfk then
         VirtualUser:CaptureController()
@@ -113,20 +137,15 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Sistema de Teclas Fixo (Sem Bug)
+-- TECLAS FIXAS (TOGGLE REAL)
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    
     if input.KeyCode == Enum.KeyCode.F then
         FlyToggle:Set(not _G.flyEnabled)
-        Rayfield:Notify({Title = "Movement", Content = "Fly " .. (_G.flyEnabled and "On" or "Off"), Duration = 2})
     end
-    
     if input.KeyCode == Enum.KeyCode.N then
         NoclipToggle:Set(not _G.noclip)
-        Rayfield:Notify({Title = "Movement", Content = "Noclip " .. (_G.noclip and "On" or "Off"), Duration = 2})
     end
-    
     if input.KeyCode == Enum.KeyCode.LeftAlt then
         local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
         if gui then gui.Enabled = not gui.Enabled end
