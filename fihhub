@@ -2,58 +2,38 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ SETTINGS ]] --
 local NOME_DA_PART = "WINPART"
-local KEY_LINK = "https://paste-bin.org/gfbqx9xw7q"
 _G.tpEnabled = false
 _G.noclip = false
 _G.flyEnabled = false
+_G.antiAfk = false
 _G.flySpeed = 50
+
+local ToggleKey = Enum.KeyCode.LeftAlt
+local FlyKey = Enum.KeyCode.F
+local NoclipKey = Enum.KeyCode.N
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
--- [[ KEY SYSTEM ]] --
+-- [[ WINDOW CONFIG ]] --
 local Window = Rayfield:CreateWindow({
    Name = "FihHub",
    LoadingTitle = "FihHub Loading...",
    LoadingSubtitle = "by Slick1245",
-   ConfigurationSaving = { Enabled = true, FolderName = "FihHubConfigs", FileName = "key" },
-   KeySystem = true,
-   KeySettings = {
-      Title = "Security Access",
-      Subtitle = "Key System",
-      Note = "Check your clipboard for the link!",
-      FileName = "key",
-      SaveKey = true,
-      GrabKeyFromSite = false,
-      Key = {"SlickKey123"} 
-   }
+   ConfigurationSaving = { Enabled = true, FolderName = "FihHubConfigs", FileName = "settings" },
+   KeySystem = false 
 })
-
--- [[ FORCED CLIPBOARD FIX ]] --
-task.spawn(function()
-    -- Tenta copiar 5 vezes com intervalos para garantir que o executor processe
-    for i = 1, 5 do
-        pcall(function()
-            setclipboard(KEY_LINK)
-        end)
-        task.wait(2)
-    end
-    
-    Rayfield:Notify({
-       Title = "System",
-       Content = "Key link copied to clipboard! (Retry finished)",
-       Duration = 5,
-    })
-end)
 
 -- [[ TABS ]] --
 local MainTab = Window:CreateTab("Main", 4483345998)
 local MovementTab = Window:CreateTab("Movement", 4483345998)
+local SettingsTab = Window:CreateTab("Settings", 4483345998)
 local CreditsTab = Window:CreateTab("Credits", 4483345998)
 
--- [[ MAIN ]] --
+-- [[ MAIN TAB ]] --
 MainTab:CreateSection("--- Farming ---")
 MainTab:CreateToggle({
    Name = "Auto Teleport",
@@ -61,30 +41,83 @@ MainTab:CreateToggle({
    Callback = function(Value) _G.tpEnabled = Value end,
 })
 
--- [[ MOVEMENT ]] --
-MovementTab:CreateSection("--- Binds ---")
+MainTab:CreateToggle({
+   Name = "Anti-AFK",
+   CurrentValue = false,
+   Callback = function(Value) _G.antiAfk = Value end,
+})
+
+-- [[ MOVEMENT TAB ]] --
+MovementTab:CreateSection("--- IY Fly System ---")
+
+MovementTab:CreateToggle({
+   Name = "Fly Master Switch",
+   CurrentValue = false,
+   Callback = function(Value) _G.flyEnabled = Value end,
+})
+
+MovementTab:CreateSlider({
+   Name = "Fly Speed",
+   Range = {10, 500},
+   Increment = 10,
+   CurrentValue = 50,
+   Callback = function(Value) _G.flySpeed = Value end,
+})
+
 MovementTab:CreateKeybind({
-   Name = "Fly (F)",
+   Name = "Fly Keybind",
    CurrentKeybind = "F",
-   Callback = function() _G.flyEnabled = not _G.flyEnabled end,
+   Callback = function(Key) FlyKey = Key end,
 })
 
+MovementTab:CreateSection("--- Noclip ---")
 MovementTab:CreateKeybind({
-   Name = "Noclip (N)",
+   Name = "Noclip Keybind",
    CurrentKeybind = "N",
-   Callback = function() _G.noclip = not _G.noclip end,
+   Callback = function(Key) NoclipKey = Key end,
 })
 
--- [[ CREDITS ]] --
-CreditsTab:CreateSection("--- Owner ---")
-CreditsTab:CreateLabel("Script by: Slick1245")
-CreditsTab:CreateParagraph({
-    Title = "Instructions", 
-    Content = "Key link is: " .. KEY_LINK .. "\nPress [LEFT ALT] to toggle UI."
+-- [[ SETTINGS TAB ]] --
+SettingsTab:CreateKeybind({
+   Name = "Menu Keybind",
+   CurrentKeybind = "LeftAlt",
+   Callback = function(Key) ToggleKey = Key end,
 })
 
--- [[ LOGIC ]] --
--- Client-side Noclip Logic
+-- [[ CREDITS TAB ]] --
+CreditsTab:CreateLabel("Owner: Slick1245")
+CreditsTab:CreateParagraph({Title = "Fly Controls", Content = "W/S: Forward/Back\nA/D: Left/Right\nSpace: Up\nL-Shift: Down"})
+
+--- [[ LOGIC LOOPS ]] ---
+
+-- IY STYLE FLY LOGIC (Client-side)
+RunService.RenderStepped:Connect(function()
+    if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local root = LocalPlayer.Character.HumanoidRootPart
+        local cam = workspace.CurrentCamera
+        local velocity = Vector3.new(0,0,0)
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then velocity = velocity + cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then velocity = velocity - cam.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then velocity = velocity - cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then velocity = velocity + cam.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then velocity = velocity + Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then velocity = velocity - Vector3.new(0,1,0) end
+
+        root.Velocity = velocity * _G.flySpeed
+        
+        -- Mantém o boneco reto e estável como no IY
+        if velocity.Magnitude > 0 then
+            root.Anchored = false
+        else
+            root.Anchored = true
+        end
+    elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.Anchored = false
+    end
+end)
+
+-- Noclip Logic
 RunService.Stepped:Connect(function()
     if _G.noclip and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -93,9 +126,20 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Alt Keybind to Toggle UI
+-- Anti-AFK
+LocalPlayer.Idled:Connect(function()
+    if _G.antiAfk then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
+-- Inputs (Binds)
 UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.LeftAlt then
+    if gpe then return end
+    if input.KeyCode == FlyKey then _G.flyEnabled = not _G.flyEnabled end
+    if input.KeyCode == NoclipKey then _G.noclip = not _G.noclip end
+    if input.KeyCode == ToggleKey then
         local gui = game:GetService("CoreGui"):FindFirstChild("Rayfield") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Rayfield")
         if gui then gui.Enabled = not gui.Enabled end
     end
