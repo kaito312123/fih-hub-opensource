@@ -25,11 +25,10 @@ local MovementTab = Window:CreateTab("Movement", 4483345998)
 local SettingsTab = Window:CreateTab("Settings", 4483345998)
 local CreditsTab = Window:CreateTab("Credits", 4483345998)
 
--- PRIMEIRA ABA (MAIN)
 MainTab:CreateSection("Farm")
 
 MainTab:CreateToggle({
-   Name = "Auto Farm",
+   Name = "Auto Farm Win",
    CurrentValue = false,
    Callback = function(Value) 
       _G.autoFarm = Value 
@@ -44,7 +43,6 @@ MainTab:CreateToggle({
    Callback = function(Value) _G.antiAfk = Value end,
 })
 
--- SEGUNDA ABA (MOVEMENT)
 MovementTab:CreateSection("Fly")
 
 local FlyToggle = MovementTab:CreateToggle({
@@ -69,22 +67,25 @@ local NoclipToggle = MovementTab:CreateToggle({
    Callback = function(Value) _G.noclip = Value end,
 })
 
--- OUTRAS ABAS
 SettingsTab:CreateSection("Menu")
 SettingsTab:CreateLabel("Alt para fechar")
 
 CreditsTab:CreateSection("Owner")
 CreditsTab:CreateLabel("Slick1245")
 
--- LOGICA AUTO FARM
+-- LÓGICA AUTO FARM (VERIFICA WINPART A CADA 1 SEGUNDO)
 spawn(function()
-    while task.wait() do
+    while true do
+        task.wait(1) -- Verifica a cada segundo exato
         if _G.autoFarm then
             pcall(function()
-                for _, v in pairs(workspace:GetDescendants()) do
-                    if v:IsA("TouchTransmitter") and _G.autoFarm then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = v.Parent.CFrame
-                        task.wait(0.1)
+                local character = LocalPlayer.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    local targetPart = workspace:FindFirstChild("WINPART", true) -- Busca profunda pela WINPART
+                    
+                    if targetPart and targetPart:IsA("BasePart") then
+                        -- Teleporta 7 studs acima da WINPART
+                        character.HumanoidRootPart.CFrame = targetPart.CFrame * CFrame.new(0, 7, 0)
                     end
                 end
             end)
@@ -92,7 +93,7 @@ spawn(function()
     end
 end)
 
--- LOGICA FLY (CAI SEM RAGDOLL)
+-- LÓGICA FLY HD
 RunService.RenderStepped:Connect(function()
     if _G.flyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
@@ -120,7 +121,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- LOGICA NOCLIP
+-- LÓGICA NOCLIP
 RunService.Stepped:Connect(function()
     if LocalPlayer.Character and _G.noclip then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -137,7 +138,7 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- TECLAS FIXAS (TOGGLE REAL)
+-- TECLAS FIXAS (F, N, ALT)
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.F then
