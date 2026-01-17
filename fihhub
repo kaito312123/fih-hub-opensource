@@ -4,13 +4,15 @@ local ModuleData = HttpRequest({Method = "GET", Url = "https://raw.githubusercon
 local GuiLibrary = loadstring(ModuleData.Body)()
 
 -- [[ CONFIGURATIONS ]] --
-local NOME_DA_PART = "WINPART"
-local ALTURA_OFFSET = 7
-local INTERVALO = 0.7 
-local tpLigado = false
-local afkLigado = false
-local flyLigado = false
+local TARGET_PART_NAME = "WINPART"
+local HEIGHT_OFFSET = 7
+local REFRESH_INTERVAL = 0.7 
+local tpEnabled = false
+local afkEnabled = false
+local flyEnabled = false
+local blackScreenEnabled = false
 local flySpeed = 50
+local winsCount = 0
 
 -- [[ SERVICES ]] --
 local UserInputService = game:GetService("UserInputService")
@@ -23,64 +25,96 @@ local MainFrame, ScreenGui = GuiLibrary:Load("Sigma Hub", "Dark")
 
 local Tabs = {
     Main = MainFrame:NewTabEntry("Main", "rbxassetid://10734945662"),
-    Scripts = MainFrame:NewTabEntry("Utilities", "rbxassetid://10734944532")
+    Utilities = MainFrame:NewTabEntry("Utilities", "rbxassetid://10734944532")
 }
 
+-- [[ WINS COUNTER ]] --
+local WinsLabel = Tabs.Main:NewLabelEntry(
+    "Wins: 0", 
+    "Wins get on farm", 
+    "Positive"
+)
+
+-- Monitor Win changes
+task.spawn(function()
+    local leaderstats = LocalPlayer:WaitForChild("leaderstats", 5)
+    local winsValue = leaderstats and (leaderstats:FindFirstChild("Wins") or leaderstats:FindFirstChild("Win"))
+    
+    if winsValue then
+        winsValue.Changed:Connect(function(val)
+            winsCount = val
+            WinsLabel:UpdateEverything("Wins: " .. tostring(winsCount), "Wins get on farm", "Positive")
+        end)
+    end
+end)
+
+-- [[ FPS BOOST / BLACK SCREEN LOGIC ]] --
+local blackFrame = Instance.new("Frame")
+blackFrame.Size = UDim2.new(1, 0, 1, 0)
+blackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+blackFrame.Visible = false
+blackFrame.ZIndex = 9999
+blackFrame.Parent = ScreenGui
+
+local function toggleBlackScreen(state)
+    blackScreenEnabled = state
+    blackFrame.Visible = state
+    RunService:Set3dRenderingEnabled(not state) -- Real FPS Boost by disabling 3D rendering
+end
+
 -- [[ TOOL SCRIPT LOGIC ]] --
-local s = false
-local k = {}
+local isPlayingAnim = false
+local animConnections = {}
 
 local function createTool()
-    local t = Instance.new("Tool")
-    t.Name = "Jerk Off" -- O nome que aparece na mochila
-    t.RequiresHandle = false
-    t.Parent = LocalPlayer.Backpack
+    local tool = Instance.new("Tool")
+    tool.Name = "Jerk Off"
+    tool.RequiresHandle = false
+    tool.Parent = LocalPlayer.Backpack
     
-    local function e(id, t1, t2, id2)
+    local function playAnimation(id, startTime, endTime, connectionID)
         local char = LocalPlayer.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         if not hum then return end
-        local a = Instance.new("Animation")
-        a.AnimationId = "rbxassetid://" .. id
-        local tr = hum:LoadAnimation(a)
-        k[id2] = RunService.RenderStepped:Connect(function()
-            if s then
-                if tr.TimePosition >= t2 or tr.IsPlaying == false then
-                    tr:Play()
-                    tr.TimePosition = t1
+        
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://" .. id
+        local track = hum:LoadAnimation(anim)
+        
+        animConnections[connectionID] = RunService.RenderStepped:Connect(function()
+            if isPlayingAnim then
+                if track.TimePosition >= endTime or track.IsPlaying == false then
+                    track:Play()
+                    track.TimePosition = startTime
                 end
             else
-                tr:Stop()
+                track:Stop()
             end
         end)
-        tr:Play()
-        tr.TimePosition = t1
+        track:Play()
+        track.TimePosition = startTime
     end
 
-    local function x()
-        s = true
-        e("72042024", 0.5, 0.9, 1)
-        e("168268306", 1, 1.001, 2)
-    end
+    tool.Equipped:Connect(function()
+        isPlayingAnim = true
+        playAnimation("72042024", 0.5, 0.9, 1)
+        playAnimation("168268306", 1, 1.001, 2)
+    end)
 
-    local function stop()
-        s = false
-        for i, v in pairs(k) do v:Disconnect() end
-        k = {}
-    end
+    tool.Unequipped:Connect(function()
+        isPlayingAnim = false
+        for _, connection in pairs(animConnections) do connection:Disconnect() end
+        animConnections = {}
+    end)
 
-    t.Equipped:Connect(x)
-    t.Unequipped:Connect(stop)
-    
-    -- Notificação de sucesso
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Tool Received",
-        Text = "Jerk Off tool added to backpack!",
+        Title = "Success",
+        Text = "Jerk Off tool added!",
         Duration = 2
     })
 end
 
--- [[ CLEANUP FUNCTION ]] --
+-- [[ MAP CLEANUP ]] --
 local function cleanMap()
     local count = 0
     for _, obj in pairs(game.Workspace:GetDescendants()) do
@@ -90,7 +124,7 @@ local function cleanMap()
         end
     end
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Map Cleaned",
+        Title = "Cleaned",
         Text = "Removed " .. count .. " dangerous objects.",
         Duration = 3
     })
@@ -99,24 +133,23 @@ end
 -- [[ FLY LOGIC ]] --
 local bodyVelocity, bodyGyro
 local function toggleFly()
-    flyLigado = not flyLigado
+    flyEnabled = not flyEnabled
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-    if flyLigado and root and hum then
+    if flyEnabled and root and hum then
         hum.PlatformStand = true
         bodyGyro = Instance.new("BodyGyro", root)
         bodyGyro.P = 9e4
         bodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
         bodyGyro.cframe = root.CFrame
-
         bodyVelocity = Instance.new("BodyVelocity", root)
         bodyVelocity.velocity = Vector3.new(0, 0.1, 0)
         bodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
 
         task.spawn(function()
-            while flyLigado do
+            while flyEnabled do
                 local cam = workspace.CurrentCamera.CFrame
                 local direction = Vector3.new(0, 0, 0)
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + cam.LookVector end
@@ -134,21 +167,19 @@ local function toggleFly()
     end
 end
 
--- Fly Hotkey (F)
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.F then
-        toggleFly()
-    end
+-- Hotkeys
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.F then toggleFly() end
 end)
 
--- [[ TELEPORT LOGIC ]] --
+-- [[ TELEPORT LOOP ]] --
 task.spawn(function()
     while true do
-        if tpLigado then
+        if tpEnabled then
             pcall(function()
                 local target = nil
                 for _, obj in pairs(game.Workspace:GetDescendants()) do
-                    if obj.Name == NOME_DA_PART and obj:IsA("BasePart") then
+                    if obj.Name == TARGET_PART_NAME and obj:IsA("BasePart") then
                         target = obj
                         break
                     end
@@ -160,13 +191,13 @@ task.spawn(function()
                     if root and hum then
                         hum.Jump = true
                         task.wait(0.05) 
-                        root.CFrame = target.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
+                        root.CFrame = target.CFrame * CFrame.new(0, HEIGHT_OFFSET, 0)
                         root.Velocity = Vector3.new(0, 0, 0)
                     end
                 end
             end)
         end
-        task.wait(INTERVALO)
+        task.wait(REFRESH_INTERVAL)
     end
 end)
 
@@ -174,29 +205,33 @@ end)
 
 -- Main Tab
 Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Jump & TP every 0.7s", false, function(state)
-    tpLigado = state
+    tpEnabled = state
 end)
 
-Tabs.Main:NewToggleEntry("Fly (F to toggle)", "Fly around the map", false, function(state)
-    if state ~= flyLigado then toggleFly() end
+Tabs.Main:NewToggleEntry("Fly (F to toggle)", "Enable Flight", false, function(state)
+    if state ~= flyEnabled then toggleFly() end
 end)
 
 Tabs.Main:NewToggleEntry("Anti-AFK", "Prevent disconnect", false, function(state)
-    afkLigado = state
+    afkEnabled = state
 end)
 
 -- Utilities Tab
-Tabs.Scripts:NewButtonEntry("Give Jerk Off Tool", "Adds the tool to your backpack", function()
+Tabs.Utilities:NewToggleEntry("Black Screen (FPS Boost)", "Disables 3D for performance", false, function(state)
+    toggleBlackScreen(state)
+end)
+
+Tabs.Utilities:NewButtonEntry("Give Jerk Off Tool", "Adds tool to backpack", function()
     createTool()
 end)
 
-Tabs.Scripts:NewButtonEntry("Destroy KillBricks/Invis", "Removes map hazards", function()
+Tabs.Utilities:NewButtonEntry("Destroy KillBricks/Invis", "Removes hazards", function()
     cleanMap()
 end)
 
--- [[ ANTI-AFK LOGIC ]] --
+-- Anti-AFK Logic
 LocalPlayer.Idled:Connect(function()
-    if afkLigado then
+    if afkEnabled then
         game:GetService("VirtualUser"):CaptureController()
         game:GetService("VirtualUser"):ClickButton2(Vector2.new())
     end
