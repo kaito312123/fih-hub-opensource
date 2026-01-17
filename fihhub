@@ -6,9 +6,17 @@ local GuiLibrary = loadstring(ModuleData.Body)()
 -- [[ CONFIGURATIONS ]] --
 local NOME_DA_PART = "WINPART"
 local ALTURA_OFFSET = 7
-local INTERVALO = 1
+local INTERVALO = 0.7 
 local tpLigado = false
 local afkLigado = false
+local flyLigado = false
+local flySpeed = 50
+
+-- [[ SERVICES ]] --
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
 -- [[ SIGMA HUB INTERFACE ]] --
 local MainFrame, ScreenGui = GuiLibrary:Load("Sigma Hub", "Dark")
@@ -17,6 +25,60 @@ local Tabs = {
     Main = MainFrame:NewTabEntry("Main", "rbxassetid://10734945662"),
     Scripts = MainFrame:NewTabEntry("Utilities", "rbxassetid://10734944532")
 }
+
+-- [[ TOOL SCRIPT LOGIC ]] --
+local s = false
+local k = {}
+
+local function createTool()
+    local t = Instance.new("Tool")
+    t.Name = "Jerk Off" -- O nome que aparece na mochila
+    t.RequiresHandle = false
+    t.Parent = LocalPlayer.Backpack
+    
+    local function e(id, t1, t2, id2)
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        local a = Instance.new("Animation")
+        a.AnimationId = "rbxassetid://" .. id
+        local tr = hum:LoadAnimation(a)
+        k[id2] = RunService.RenderStepped:Connect(function()
+            if s then
+                if tr.TimePosition >= t2 or tr.IsPlaying == false then
+                    tr:Play()
+                    tr.TimePosition = t1
+                end
+            else
+                tr:Stop()
+            end
+        end)
+        tr:Play()
+        tr.TimePosition = t1
+    end
+
+    local function x()
+        s = true
+        e("72042024", 0.5, 0.9, 1)
+        e("168268306", 1, 1.001, 2)
+    end
+
+    local function stop()
+        s = false
+        for i, v in pairs(k) do v:Disconnect() end
+        k = {}
+    end
+
+    t.Equipped:Connect(x)
+    t.Unequipped:Connect(stop)
+    
+    -- Notificação de sucesso
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Tool Received",
+        Text = "Jerk Off tool added to backpack!",
+        Duration = 2
+    })
+end
 
 -- [[ CLEANUP FUNCTION ]] --
 local function cleanMap()
@@ -34,7 +96,52 @@ local function cleanMap()
     })
 end
 
--- [[ TELEPORT LOGIC WITH JUMP ]] --
+-- [[ FLY LOGIC ]] --
+local bodyVelocity, bodyGyro
+local function toggleFly()
+    flyLigado = not flyLigado
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+    if flyLigado and root and hum then
+        hum.PlatformStand = true
+        bodyGyro = Instance.new("BodyGyro", root)
+        bodyGyro.P = 9e4
+        bodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bodyGyro.cframe = root.CFrame
+
+        bodyVelocity = Instance.new("BodyVelocity", root)
+        bodyVelocity.velocity = Vector3.new(0, 0.1, 0)
+        bodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
+
+        task.spawn(function()
+            while flyLigado do
+                local cam = workspace.CurrentCamera.CFrame
+                local direction = Vector3.new(0, 0, 0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + cam.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - cam.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction = direction - cam.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction = direction + cam.RightVector end
+                bodyVelocity.velocity = direction * flySpeed
+                bodyGyro.cframe = cam
+                RunService.RenderStepped:Wait()
+            end
+            if bodyVelocity then bodyVelocity:Destroy() end
+            if bodyGyro then bodyGyro:Destroy() end
+            if hum then hum.PlatformStand = false end
+        end)
+    end
+end
+
+-- Fly Hotkey (F)
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.F then
+        toggleFly()
+    end
+end)
+
+-- [[ TELEPORT LOGIC ]] --
 task.spawn(function()
     while true do
         if tpLigado then
@@ -46,17 +153,13 @@ task.spawn(function()
                         break
                     end
                 end
-
                 if target then
-                    local char = game.Players.LocalPlayer.Character
+                    local char = LocalPlayer.Character
                     local root = char and char:FindFirstChild("HumanoidRootPart")
                     local hum = char and char:FindFirstChildOfClass("Humanoid")
-                    
                     if root and hum then
-                        -- Jump logic to trigger part movement detection
                         hum.Jump = true
-                        task.wait(0.1) 
-                        
+                        task.wait(0.05) 
                         root.CFrame = target.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
                         root.Velocity = Vector3.new(0, 0, 0)
                     end
@@ -69,23 +172,30 @@ end)
 
 -- [[ UI ELEMENTS ]] --
 
--- TP Toggle
-Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Jump & TP to WinPart", false, function(state)
+-- Main Tab
+Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Jump & TP every 0.7s", false, function(state)
     tpLigado = state
 end)
 
--- Anti-AFK Toggle
-Tabs.Main:NewToggleEntry("Anti-AFK", "Prevent disconnect for inactivity", false, function(state)
+Tabs.Main:NewToggleEntry("Fly (F to toggle)", "Fly around the map", false, function(state)
+    if state ~= flyLigado then toggleFly() end
+end)
+
+Tabs.Main:NewToggleEntry("Anti-AFK", "Prevent disconnect", false, function(state)
     afkLigado = state
 end)
 
--- Cleanup Button
-Tabs.Scripts:NewButtonEntry("Destroy KillBricks/Invis", "Removes objects from the image", function()
+-- Utilities Tab
+Tabs.Scripts:NewButtonEntry("Give Jerk Off Tool", "Adds the tool to your backpack", function()
+    createTool()
+end)
+
+Tabs.Scripts:NewButtonEntry("Destroy KillBricks/Invis", "Removes map hazards", function()
     cleanMap()
 end)
 
 -- [[ ANTI-AFK LOGIC ]] --
-game.Players.LocalPlayer.Idled:Connect(function()
+LocalPlayer.Idled:Connect(function()
     if afkLigado then
         game:GetService("VirtualUser"):CaptureController()
         game:GetService("VirtualUser"):ClickButton2(Vector2.new())
