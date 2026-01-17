@@ -1,179 +1,95 @@
--- [[ LIBRARY LOADING ]] --
+-- [[ CARREGAMENTO DA LIBRARY ]] --
 local HttpRequest = request or http_request or http and http.request or syn and syn.request
 local ModuleData = HttpRequest({Method = "GET", Url = "https://raw.githubusercontent.com/KadeTheExploiter/Machina/refs/heads/main/Module.luau"})
 local GuiLibrary = loadstring(ModuleData.Body)()
 
--- [[ SETTINGS ]] --
-local SETTINGS = {
-    PART_NAME = "WINPART",
-    HEIGHT = 7,
-    DELAY = 0.7,
-    TP_ENABLED = false,
-    AFK_ENABLED = false,
-    FLY_ENABLED = false,
-    FLY_SPEED = 50,
-    BLACK_SCREEN = false
-}
+-- [[ CONFIGURAÇÕES ]] --
+local NOME_DA_PART = "WINPART"
+local ALTURA_OFFSET = 7
+local INTERVALO = 1
+local tpLigado = false
+local afkLigado = false
 
--- [[ SERVICES ]] --
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
+-- [[ INTERFACE MACHINA ]] --
+local MainFrame, ScreenGui = GuiLibrary:Load("Bunni Hub Client", "Dark")
 
--- [[ INTERFACE ]] --
-local MainFrame, ScreenGui = GuiLibrary:Load("Sigma Hub", "Dark")
 local Tabs = {
-    Main = MainFrame:NewTabEntry("Main", "rbxassetid://10734945662"),
-    Utilities = MainFrame:NewTabEntry("Utilities", "rbxassetid://10734944532")
+    Main = MainFrame:NewTabEntry("Principal", "rbxassetid://10734945662"),
+    Scripts = MainFrame:NewTabEntry("Utilidades", "rbxassetid://10734944532")
 }
 
--- [[ WINS LABEL ]] --
-local WinsLabel = Tabs.Main:NewLabelEntry("Wins: 0", "Wins get on farm", "Positive")
-task.spawn(function()
-    local stats = LocalPlayer:WaitForChild("leaderstats", 10)
-    local w = stats and (stats:FindFirstChild("Wins") or stats:FindFirstChild("Win"))
-    if w then
-        WinsLabel:UpdateEverything("Wins: " .. tostring(w.Value), "Wins get on farm", "Positive")
-        w.Changed:Connect(function(v) WinsLabel:UpdateEverything("Wins: " .. v, "Wins get on farm", "Positive") end)
-    end
-end)
-
--- [[ NEW TELEPORT SYSTEM (REBUILT) ]] --
-local cachedTarget = nil
-
-local function getWinPart()
-    if cachedTarget and cachedTarget.Parent then return cachedTarget end
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj.Name == SETTINGS.PART_NAME and obj:IsA("BasePart") then
-            cachedTarget = obj
-            return obj
+-- [[ FUNÇÕES DE LIMPEZA ]] --
+local function limparMapa()
+    local count = 0
+    for _, obj in pairs(game.Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name == "KillBrick" or obj.Name == "Invis") then
+            obj:Destroy()
+            count = count + 1
         end
     end
-    return nil
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Limpeza Concluída",
+        Text = "Removidos " .. count .. " objetos perigosos.",
+        Duration = 3
+    })
 end
 
+-- [[ LÓGICA DE TELEPORTE COM PULO ]] --
 task.spawn(function()
     while true do
-        if SETTINGS.TP_ENABLED then
-            local target = getWinPart()
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if tpLigado then
+            pcall(function()
+                local target = nil
+                for _, obj in pairs(game.Workspace:GetDescendants()) do
+                    if obj.Name == NOME_DA_PART and obj:IsA("BasePart") then
+                        target = obj
+                        break
+                    end
+                end
 
-            if target and root and hum then
-                pcall(function()
-                    -- Force jump for movement detection
-                    hum.Jump = true
-                    task.wait(0.05)
+                if target then
+                    local char = game.Players.LocalPlayer.Character
+                    local root = char and char:FindFirstChild("HumanoidRootPart")
+                    local hum = char and char:FindFirstChildOfClass("Humanoid")
                     
-                    -- Safe Teleport
-                    root.CFrame = target.CFrame * CFrame.new(0, SETTINGS.HEIGHT, 0)
-                    root.Velocity = Vector3.new(0, 0, 0)
-                end)
-            end
-        end
-        task.wait(SETTINGS.DELAY)
-    end
-end)
-
--- [[ FPS BOOST / BLACK SCREEN ]] --
-local blackFrame = Instance.new("Frame")
-blackFrame.Size = UDim2.new(1, 0, 1, 0)
-blackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-blackFrame.Visible = false
-blackFrame.ZIndex = 9999
-blackFrame.Parent = ScreenGui
-
-local function toggleBlackScreen(state)
-    SETTINGS.BLACK_SCREEN = state
-    blackFrame.Visible = state
-    RunService:Set3dRenderingEnabled(not state)
-end
-
--- [[ FLY SYSTEM ]] --
-local bv, bg
-local function toggleFly()
-    SETTINGS.FLY_ENABLED = not SETTINGS.FLY_ENABLED
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-
-    if SETTINGS.FLY_ENABLED and root and hum then
-        hum.PlatformStand = true
-        bg = Instance.new("BodyGyro", root)
-        bg.P = 9e4
-        bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-        bg.cframe = root.CFrame
-        bv = Instance.new("BodyVelocity", root)
-        bv.velocity = Vector3.new(0, 0.1, 0)
-        bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
-
-        task.spawn(function()
-            while SETTINGS.FLY_ENABLED do
-                local cam = Workspace.CurrentCamera.CFrame
-                local dir = Vector3.new(0, 0, 0)
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.RightVector end
-                bv.velocity = dir * SETTINGS.FLY_SPEED
-                bg.cframe = cam
-                RunService.RenderStepped:Wait()
-            end
-            if bv then bv:Destroy() end
-            if bg then bg:Destroy() end
-            if hum then hum.PlatformStand = false end
-        end)
-    end
-end
-
--- [[ UTILITIES ]] --
-local function createTool()
-    local t = Instance.new("Tool", LocalPlayer.Backpack)
-    t.Name = "Jerk Off"
-    t.RequiresHandle = false
-    local isPlaying = false
-    local conns = {}
-
-    t.Equipped:Connect(function()
-        isPlaying = true
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        local function play(id, t1, t2, cid)
-            local a = Instance.new("Animation") a.AnimationId = "rbxassetid://"..id
-            local tr = hum:LoadAnimation(a)
-            conns[cid] = RunService.RenderStepped:Connect(function()
-                if isPlaying then if tr.TimePosition >= t2 or not tr.IsPlaying then tr:Play() tr.TimePosition = t1 end
-                else tr:Stop() end
+                    if root and hum then
+                        -- Força um pulo antes do TP para o jogo detectar movimento
+                        hum.Jump = true
+                        task.wait(0.1) -- Pequeno delay para o pulo registrar
+                        
+                        root.CFrame = target.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
+                        root.Velocity = Vector3.new(0, 0, 0)
+                    end
+                end
             end)
-            tr:Play() tr.TimePosition = t1
         end
-        play("72042024", 0.5, 0.9, 1)
-        play("168268306", 1, 1.001, 2)
-    end)
-    t.Unequipped:Connect(function()
-        isPlaying = false
-        for _, v in pairs(conns) do v:Disconnect() end
-        conns = {}
-    end)
-end
-
--- [[ UI BINDING ]] --
-Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Jump & TP every 0.7s", false, function(s) SETTINGS.TP_ENABLED = s end)
-Tabs.Main:NewToggleEntry("Fly (F to toggle)", "Flight mode", false, function(s) if s ~= SETTINGS.FLY_ENABLED then toggleFly() end end)
-Tabs.Main:NewToggleEntry("Anti-AFK", "No disconnect", false, function(s) SETTINGS.AFK_ENABLED = s end)
-
-Tabs.Utilities:NewToggleEntry("Black Screen (FPS Boost)", "Turn off 3D Render", false, function(s) toggleBlackScreen(s) end)
-Tabs.Utilities:NewButtonEntry("Give Jerk Off Tool", "Add tool to backpack", function() createTool() end)
-Tabs.Utilities:NewButtonEntry("Destroy KillBricks/Invis", "Clean map", function()
-    for _, o in pairs(Workspace:GetDescendants()) do if o:IsA("BasePart") and (o.Name == "KillBrick" or o.Name == "Invis") then o:Destroy() end end
+        task.wait(INTERVALO)
+    end
 end)
 
--- Hotkey F
-UserInputService.InputBegan:Connect(function(i, g) if not g and i.KeyCode == Enum.KeyCode.F then toggleFly() end end)
+-- [[ ELEMENTOS DA UI ]] --
 
--- Anti-AFK
-LocalPlayer.Idled:Connect(function() if SETTINGS.AFK_ENABLED then game:GetService("VirtualUser"):CaptureController() game:GetService("VirtualUser"):ClickButton2(Vector2.new()) end end)
+-- Botão de Teleporte
+Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Pula e teleporta para a vitória", false, function(state)
+    tpLigado = state
+end)
 
-print("Sigma Hub Rebuilt Loaded Successfully")
+-- Botão Anti-AFK
+Tabs.Main:NewToggleEntry("Anti-AFK", "Evita ser expulso por inatividade", false, function(state)
+    afkLigado = state
+end)
+
+-- Botão de Limpar (KillBricks/Invis)
+Tabs.Scripts:NewButtonEntry("Deletar KillBricks/Invis", "Remove as partes da imagem enviada", function()
+    limparMapa()
+end)
+
+-- [[ LÓGICA ANTI-AFK ]] --
+game.Players.LocalPlayer.Idled:Connect(function()
+    if afkLigado then
+        game:GetService("VirtualUser"):CaptureController()
+        game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+    end
+end)
+
+print("nigger Client Carregado com Sucesso!")
