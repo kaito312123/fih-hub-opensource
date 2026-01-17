@@ -9,14 +9,19 @@ local ALTURA_OFFSET = 7
 local INTERVALO = 1
 local tpLigado = false
 local afkLigado = false
+local vitorias = 0
 
 -- [[ INTERFACE MACHINA ]] --
-local MainFrame, ScreenGui = GuiLibrary:Load("Bunni Hub Client", "Dark")
+-- Nome atualizado para Fih Hub
+local MainFrame, ScreenGui = GuiLibrary:Load("Fih Hub", "Dark")
 
 local Tabs = {
     Main = MainFrame:NewTabEntry("Principal", "rbxassetid://10734945662"),
     Scripts = MainFrame:NewTabEntry("Utilidades", "rbxassetid://10734944532")
 }
+
+-- [[ ELEMENTOS DE EXIBIÇÃO ]] --
+local vitoriasLabel = Tabs.Main:NewLabelEntry("Vitórias: 0")
 
 -- [[ FUNÇÕES DE LIMPEZA ]] --
 local function limparMapa()
@@ -53,12 +58,17 @@ task.spawn(function()
                     local hum = char and char:FindFirstChildOfClass("Humanoid")
                     
                     if root and hum then
-                        -- Força um pulo antes do TP para o jogo detectar movimento
+                        -- Força o pulo
                         hum.Jump = true
-                        task.wait(0.1) -- Pequeno delay para o pulo registrar
+                        task.wait(0.1)
                         
+                        -- Teleporta
                         root.CFrame = target.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
                         root.Velocity = Vector3.new(0, 0, 0)
+                        
+                        -- Atualiza o contador de vitórias na interface
+                        vitorias = vitorias + 1
+                        vitoriasLabel:SetText("Vitórias: " .. vitorias)
                     end
                 end
             end)
@@ -69,7 +79,7 @@ end)
 
 -- [[ ELEMENTOS DA UI ]] --
 
--- Botão de Teleporte
+-- Botão de Auto Farm
 Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Pula e teleporta para a vitória", false, function(state)
     tpLigado = state
 end)
@@ -80,7 +90,7 @@ Tabs.Main:NewToggleEntry("Anti-AFK", "Evita ser expulso por inatividade", false,
 end)
 
 -- Botão de Limpar (KillBricks/Invis)
-Tabs.Scripts:NewButtonEntry("Deletar KillBricks/Invis", "Remove as partes da imagem enviada", function()
+Tabs.Scripts:NewButtonEntry("Deletar KillBricks/Invis", "Remove as partes perigosas do mapa", function()
     limparMapa()
 end)
 
@@ -92,4 +102,4 @@ game.Players.LocalPlayer.Idled:Connect(function()
     end
 end)
 
-print("nigger Client Carregado com Sucesso!")
+print("Fih Hub Carregado com Sucesso!")
