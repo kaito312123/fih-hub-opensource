@@ -4,13 +4,13 @@ local ModuleData = HttpRequest({Method = "GET", Url = "https://raw.githubusercon
 local GuiLibrary = loadstring(ModuleData.Body)()
 
 -- [[ CONFIGURATIONS ]] --
-local TARGET_PART_NAME = "WINPART"
-local HEIGHT_OFFSET = 7
-local REFRESH_INTERVAL = 0.7 
-local tpEnabled = false
-local afkEnabled = false
-local flyEnabled = false
-local blackScreenEnabled = false
+local NOME_DA_PART = "WINPART"
+local ALTURA_OFFSET = 7
+local INTERVALO = 0.7 
+local tpLigado = false
+local afkLigado = false
+local flyLigado = false
+local blackScreenLigado = false
 local flySpeed = 50
 local winsCount = 0
 
@@ -18,6 +18,7 @@ local winsCount = 0
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 -- [[ SIGMA HUB INTERFACE ]] --
@@ -35,12 +36,12 @@ local WinsLabel = Tabs.Main:NewLabelEntry(
     "Positive"
 )
 
--- Monitor Win changes
 task.spawn(function()
-    local leaderstats = LocalPlayer:WaitForChild("leaderstats", 5)
+    local leaderstats = LocalPlayer:WaitForChild("leaderstats", 10)
     local winsValue = leaderstats and (leaderstats:FindFirstChild("Wins") or leaderstats:FindFirstChild("Win"))
-    
     if winsValue then
+        winsCount = winsValue.Value
+        WinsLabel:UpdateEverything("Wins: " .. tostring(winsCount), "Wins get on farm", "Positive")
         winsValue.Changed:Connect(function(val)
             winsCount = val
             WinsLabel:UpdateEverything("Wins: " .. tostring(winsCount), "Wins get on farm", "Positive")
@@ -48,7 +49,7 @@ task.spawn(function()
     end
 end)
 
--- [[ FPS BOOST / BLACK SCREEN LOGIC ]] --
+-- [[ FPS BOOST / BLACK SCREEN ]] --
 local blackFrame = Instance.new("Frame")
 blackFrame.Size = UDim2.new(1, 0, 1, 0)
 blackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -57,88 +58,73 @@ blackFrame.ZIndex = 9999
 blackFrame.Parent = ScreenGui
 
 local function toggleBlackScreen(state)
-    blackScreenEnabled = state
+    blackScreenLigado = state
     blackFrame.Visible = state
-    RunService:Set3dRenderingEnabled(not state) -- Real FPS Boost by disabling 3D rendering
+    RunService:Set3dRenderingEnabled(not state)
 end
 
 -- [[ TOOL SCRIPT LOGIC ]] --
-local isPlayingAnim = false
-local animConnections = {}
+local s = false
+local k = {}
 
 local function createTool()
-    local tool = Instance.new("Tool")
-    tool.Name = "Jerk Off"
-    tool.RequiresHandle = false
-    tool.Parent = LocalPlayer.Backpack
+    local t = Instance.new("Tool")
+    t.Name = "Jerk Off"
+    t.RequiresHandle = false
+    t.Parent = LocalPlayer.Backpack
     
-    local function playAnimation(id, startTime, endTime, connectionID)
+    local function e(id, t1, t2, id2)
         local char = LocalPlayer.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         if not hum then return end
-        
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://" .. id
-        local track = hum:LoadAnimation(anim)
-        
-        animConnections[connectionID] = RunService.RenderStepped:Connect(function()
-            if isPlayingAnim then
-                if track.TimePosition >= endTime or track.IsPlaying == false then
-                    track:Play()
-                    track.TimePosition = startTime
+        local a = Instance.new("Animation")
+        a.AnimationId = "rbxassetid://" .. id
+        local tr = hum:LoadAnimation(a)
+        k[id2] = RunService.RenderStepped:Connect(function()
+            if s then
+                if tr.TimePosition >= t2 or tr.IsPlaying == false then
+                    tr:Play()
+                    tr.TimePosition = t1
                 end
             else
-                track:Stop()
+                tr:Stop()
             end
         end)
-        track:Play()
-        track.TimePosition = startTime
+        tr:Play()
+        tr.TimePosition = t1
     end
 
-    tool.Equipped:Connect(function()
-        isPlayingAnim = true
-        playAnimation("72042024", 0.5, 0.9, 1)
-        playAnimation("168268306", 1, 1.001, 2)
+    t.Equipped:Connect(function()
+        s = true
+        e("72042024", 0.5, 0.9, 1)
+        e("168268306", 1, 1.001, 2)
     end)
 
-    tool.Unequipped:Connect(function()
-        isPlayingAnim = false
-        for _, connection in pairs(animConnections) do connection:Disconnect() end
-        animConnections = {}
+    t.Unequipped:Connect(function()
+        s = false
+        for i, v in pairs(k) do v:Disconnect() end
+        k = {}
     end)
-
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Success",
-        Text = "Jerk Off tool added!",
-        Duration = 2
-    })
 end
 
--- [[ MAP CLEANUP ]] --
+-- [[ CLEANUP ]] --
 local function cleanMap()
-    local count = 0
-    for _, obj in pairs(game.Workspace:GetDescendants()) do
+    for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") and (obj.Name == "KillBrick" or obj.Name == "Invis") then
             obj:Destroy()
-            count = count + 1
         end
     end
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Cleaned",
-        Text = "Removed " .. count .. " dangerous objects.",
-        Duration = 3
-    })
 end
 
 -- [[ FLY LOGIC ]] --
 local bodyVelocity, bodyGyro
 local function toggleFly()
-    flyEnabled = not flyEnabled
+    flyLigado = not flyLigado
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-    if flyEnabled and root and hum then
+    if flyLigado and root and hum then
         hum.PlatformStand = true
         bodyGyro = Instance.new("BodyGyro", root)
         bodyGyro.P = 9e4
@@ -149,8 +135,8 @@ local function toggleFly()
         bodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
 
         task.spawn(function()
-            while flyEnabled do
-                local cam = workspace.CurrentCamera.CFrame
+            while flyLigado do
+                local cam = Workspace.CurrentCamera.CFrame
                 local direction = Vector3.new(0, 0, 0)
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + cam.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - cam.LookVector end
@@ -167,56 +153,56 @@ local function toggleFly()
     end
 end
 
--- Hotkeys
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.F then toggleFly() end
+-- Hotkey F
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.F then toggleFly() end
 end)
 
--- [[ TELEPORT LOOP ]] --
+-- [[ TELEPORT LOOP (FIXED) ]] --
 task.spawn(function()
     while true do
-        if tpEnabled then
+        if tpLigado then
             pcall(function()
                 local target = nil
-                for _, obj in pairs(game.Workspace:GetDescendants()) do
-                    if obj.Name == TARGET_PART_NAME and obj:IsA("BasePart") then
+                -- Volta para a busca direta no Workspace
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj.Name == NOME_DA_PART and obj:IsA("BasePart") then
                         target = obj
                         break
                     end
                 end
+
                 if target then
                     local char = LocalPlayer.Character
                     local root = char and char:FindFirstChild("HumanoidRootPart")
                     local hum = char and char:FindFirstChildOfClass("Humanoid")
                     if root and hum then
-                        hum.Jump = true
-                        task.wait(0.05) 
-                        root.CFrame = target.CFrame * CFrame.new(0, HEIGHT_OFFSET, 0)
+                        hum.Jump = true -- Faz o pulo para detectar movimento
+                        task.wait(0.05)
+                        root.CFrame = target.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
                         root.Velocity = Vector3.new(0, 0, 0)
                     end
                 end
             end)
         end
-        task.wait(REFRESH_INTERVAL)
+        task.wait(INTERVALO)
     end
 end)
 
 -- [[ UI ELEMENTS ]] --
 
--- Main Tab
 Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Jump & TP every 0.7s", false, function(state)
-    tpEnabled = state
+    tpLigado = state
 end)
 
 Tabs.Main:NewToggleEntry("Fly (F to toggle)", "Enable Flight", false, function(state)
-    if state ~= flyEnabled then toggleFly() end
+    if state ~= flyLigado then toggleFly() end
 end)
 
 Tabs.Main:NewToggleEntry("Anti-AFK", "Prevent disconnect", false, function(state)
-    afkEnabled = state
+    afkLigado = state
 end)
 
--- Utilities Tab
 Tabs.Utilities:NewToggleEntry("Black Screen (FPS Boost)", "Disables 3D for performance", false, function(state)
     toggleBlackScreen(state)
 end)
@@ -231,7 +217,7 @@ end)
 
 -- Anti-AFK Logic
 LocalPlayer.Idled:Connect(function()
-    if afkEnabled then
+    if afkLigado then
         game:GetService("VirtualUser"):CaptureController()
         game:GetService("VirtualUser"):ClickButton2(Vector2.new())
     end
