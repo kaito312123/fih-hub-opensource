@@ -9,10 +9,8 @@ local ALTURA_OFFSET = 7
 local INTERVALO = 1
 local tpLigado = false
 local afkLigado = false
-local vitorias = 0
 
--- [[ INTERFACE MACHINA ]] --
--- Nome atualizado para Fih Hub
+-- [[ INTERFACE FIH HUB ]] --
 local MainFrame, ScreenGui = GuiLibrary:Load("Fih Hub", "Dark")
 
 local Tabs = {
@@ -21,7 +19,34 @@ local Tabs = {
 }
 
 -- [[ ELEMENTOS DE EXIBIÇÃO ]] --
-local vitoriasLabel = Tabs.Main:NewLabelEntry("Vitórias: 0")
+local vitoriasLabel = Tabs.Main:NewLabelEntry("Vitórias (Sessão): 0")
+
+-- [[ LÓGICA DE VERIFICAÇÃO PELA TABELA (LEADERSTATS) ]] --
+local player = game.Players.LocalPlayer
+local vitoriasIniciais = 0
+
+-- Tenta pegar o valor atual de vitórias do placar do jogo
+local function obterVitoriasAtuais()
+    local stats = player:FindFirstChild("leaderstats")
+    if stats then
+        -- Tenta achar "Wins", "Vitorias" ou "Vitórias"
+        local w = stats:FindFirstChild("Wins") or stats:FindFirstChild("Vitorias") or stats:FindFirstChild("Vitórias")
+        return w and w.Value or 0
+    end
+    return 0
+end
+
+vitoriasIniciais = obterVitoriasAtuais()
+
+-- Atualiza a label baseada na diferença (quanto você ganhou desde que abriu o script)
+task.spawn(function()
+    while true do
+        local vAtual = obterVitoriasAtuais()
+        local ganhasNessaSessao = vAtual - vitoriasIniciais
+        vitoriasLabel:SetText("Vitórias (Sessão): " .. ganhasNessaSessao)
+        task.wait(1)
+    end
+end)
 
 -- [[ FUNÇÕES DE LIMPEZA ]] --
 local function limparMapa()
@@ -32,14 +57,9 @@ local function limparMapa()
             count = count + 1
         end
     end
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Limpeza Concluída",
-        Text = "Removidos " .. count .. " objetos perigosos.",
-        Duration = 3
-    })
 end
 
--- [[ LÓGICA DE TELEPORTE COM PULO ]] --
+-- [[ LÓGICA DE TELEPORTE (IGUAL À PRIMEIRA VERSÃO) ]] --
 task.spawn(function()
     while true do
         if tpLigado then
@@ -53,22 +73,16 @@ task.spawn(function()
                 end
 
                 if target then
-                    local char = game.Players.LocalPlayer.Character
+                    local char = player.Character
                     local root = char and char:FindFirstChild("HumanoidRootPart")
                     local hum = char and char:FindFirstChildOfClass("Humanoid")
                     
                     if root and hum then
-                        -- Força o pulo
                         hum.Jump = true
                         task.wait(0.1)
                         
-                        -- Teleporta
                         root.CFrame = target.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
                         root.Velocity = Vector3.new(0, 0, 0)
-                        
-                        -- Atualiza o contador de vitórias na interface
-                        vitorias = vitorias + 1
-                        vitoriasLabel:SetText("Vitórias: " .. vitorias)
                     end
                 end
             end)
@@ -79,18 +93,15 @@ end)
 
 -- [[ ELEMENTOS DA UI ]] --
 
--- Botão de Auto Farm
 Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Pula e teleporta para a vitória", false, function(state)
     tpLigado = state
 end)
 
--- Botão Anti-AFK
 Tabs.Main:NewToggleEntry("Anti-AFK", "Evita ser expulso por inatividade", false, function(state)
     afkLigado = state
 end)
 
--- Botão de Limpar (KillBricks/Invis)
-Tabs.Scripts:NewButtonEntry("Deletar KillBricks/Invis", "Remove as partes perigosas do mapa", function()
+Tabs.Scripts:NewButtonEntry("Deletar KillBricks/Invis", "Remove as partes perigosas", function()
     limparMapa()
 end)
 
@@ -102,4 +113,4 @@ game.Players.LocalPlayer.Idled:Connect(function()
     end
 end)
 
-print("Fih Hub Carregado com Sucesso!")
+print("Fih Hub Carregado!")
