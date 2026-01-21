@@ -1,35 +1,25 @@
--- [[ CARREGAMENTO DA LIBRARY ]] --
 local HttpRequest = request or http_request or http and http.request or syn and syn.request
 local ModuleData = HttpRequest({Method = "GET", Url = "https://raw.githubusercontent.com/KadeTheExploiter/Machina/refs/heads/main/Module.luau"})
 local GuiLibrary = loadstring(ModuleData.Body)()
 
--- [[ CONFIGURAÇÕES ]] --
 local NOME_DA_PART = "WINPART"
-local ALTURA_OFFSET = 7
-local INTERVALO = 1
+local ALTURA_OFFSET = 0
 local tpLigado = false
 local afkLigado = false
 
--- [[ INTERFACE FIH HUB ]] --
 local MainFrame, ScreenGui = GuiLibrary:Load("Fih Hub", "Dark")
 
-local Tabs = {
-    Main = MainFrame:NewTabEntry("Principal", "rbxassetid://10734945662"),
-    Scripts = MainFrame:NewTabEntry("Utilidades", "rbxassetid://10734944532")
-}
+local MainTab = MainFrame:NewTabEntry("Principal", "rbxassetid://10734945662")
+local ScriptsTab = MainFrame:NewTabEntry("Utilidades", "rbxassetid://10734944532")
 
--- [[ ELEMENTOS DE EXIBIÇÃO ]] --
-local vitoriasLabel = Tabs.Main:NewLabelEntry("Vitórias (Sessão): 0")
+local vitoriasLabel = MainTab:NewLabelEntry("Vitórias (Sessão): 0")
 
--- [[ LÓGICA DE VERIFICAÇÃO PELA TABELA (LEADERSTATS) ]] --
 local player = game.Players.LocalPlayer
 local vitoriasIniciais = 0
 
--- Tenta pegar o valor atual de vitórias do placar do jogo
 local function obterVitoriasAtuais()
     local stats = player:FindFirstChild("leaderstats")
     if stats then
-        -- Tenta achar "Wins", "Vitorias" ou "Vitórias"
         local w = stats:FindFirstChild("Wins") or stats:FindFirstChild("Vitorias") or stats:FindFirstChild("Vitórias")
         return w and w.Value or 0
     end
@@ -38,17 +28,17 @@ end
 
 vitoriasIniciais = obterVitoriasAtuais()
 
--- Atualiza a label baseada na diferença (quanto você ganhou desde que abriu o script)
 task.spawn(function()
     while true do
         local vAtual = obterVitoriasAtuais()
         local ganhasNessaSessao = vAtual - vitoriasIniciais
-        vitoriasLabel:SetText("Vitórias (Sessão): " .. ganhasNessaSessao)
+        if vitoriasLabel and vitoriasLabel.SetText then
+            vitoriasLabel:SetText("Vitórias (Sessão): " .. ganhasNessaSessao)
+        end
         task.wait(1)
     end
 end)
 
--- [[ FUNÇÕES DE LIMPEZA ]] --
 local function limparMapa()
     local count = 0
     for _, obj in pairs(game.Workspace:GetDescendants()) do
@@ -59,53 +49,57 @@ local function limparMapa()
     end
 end
 
--- [[ LÓGICA DE TELEPORTE (IGUAL À PRIMEIRA VERSÃO) ]] --
+local cachedTarget = nil
+
 task.spawn(function()
     while true do
         if tpLigado then
             pcall(function()
-                local target = nil
-                for _, obj in pairs(game.Workspace:GetDescendants()) do
-                    if obj.Name == NOME_DA_PART and obj:IsA("BasePart") then
-                        target = obj
-                        break
+                if not cachedTarget or not cachedTarget.Parent then
+                    for _, obj in pairs(game.Workspace:GetDescendants()) do
+                        if obj.Name == NOME_DA_PART and obj:IsA("BasePart") then
+                            cachedTarget = obj
+                            break
+                        end
                     end
                 end
 
-                if target then
+                if cachedTarget then
                     local char = player.Character
-                    local root = char and char:FindFirstChild("HumanoidRootPart")
-                    local hum = char and char:FindFirstChildOfClass("Humanoid")
-                    
-                    if root and hum then
-                        hum.Jump = true
-                        task.wait(0.1)
+                    if char then
+                        local root = char:FindFirstChild("HumanoidRootPart")
+                        local hum = char:FindFirstChildOfClass("Humanoid")
                         
-                        root.CFrame = target.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
-                        root.Velocity = Vector3.new(0, 0, 0)
+                        if root and hum and hum.Health > 0 then
+                            hum.Jump = true 
+                            root.CFrame = cachedTarget.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
+                            root.Velocity = Vector3.new(0, 0, 0)
+                        end
                     end
                 end
             end)
+            task.wait(0.1)
+        else
+            task.wait(0.5)
         end
-        task.wait(INTERVALO)
     end
 end)
 
--- [[ ELEMENTOS DA UI ]] --
-
-Tabs.Main:NewToggleEntry("Auto Farm (WinPart)", "Pula e teleporta para a vitória", false, function(state)
+MainTab:NewToggleEntry("Auto Farm (WinPart)", "Pula e teleporta para a vitória", false, function(state)
     tpLigado = state
+    if not state then
+        cachedTarget = nil
+    end
 end)
 
-Tabs.Main:NewToggleEntry("Anti-AFK", "Evita ser expulso por inatividade", false, function(state)
+MainTab:NewToggleEntry("Anti-AFK", "Evita ser expulso por inatividade", false, function(state)
     afkLigado = state
 end)
 
-Tabs.Scripts:NewButtonEntry("Deletar KillBricks/Invis", "Remove as partes perigosas", function()
+ScriptsTab:NewButtonEntry("Deletar KillBricks/Invis", "Remove as partes perigosas", function()
     limparMapa()
 end)
 
--- [[ LÓGICA ANTI-AFK ]] --
 game.Players.LocalPlayer.Idled:Connect(function()
     if afkLigado then
         game:GetService("VirtualUser"):CaptureController()
