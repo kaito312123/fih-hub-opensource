@@ -2,43 +2,55 @@ local HttpRequest = request or http_request or http and http.request or syn and 
 local ModuleData = HttpRequest({Method = "GET", Url = "https://raw.githubusercontent.com/KadeTheExploiter/Machina/refs/heads/main/Module.luau"})
 local GuiLibrary = loadstring(ModuleData.Body)()
 
+-- Configurações
 local NOME_DA_PART = "WINPART"
-local ALTURA_OFFSET = 0
+local ALTURA_OFFSET = 3 -- Aumentei para 3 para evitar bugar no chão
 local tpLigado = false
 local afkLigado = false
 
+-- Interface
 local MainFrame, ScreenGui = GuiLibrary:Load("Fih Hub", "Dark")
-
 local MainTab = MainFrame:NewTabEntry("Principal", "rbxassetid://10734945662")
 local ScriptsTab = MainFrame:NewTabEntry("Utilidades", "rbxassetid://10734944532")
 
 local vitoriasLabel = MainTab:NewLabelEntry("Vitórias (Sessão): 0")
 
-local player = game.Players.LocalPlayer
-local vitoriasIniciais = 0
+local player = game:GetService("Players").LocalPlayer
 
-local function obterVitoriasAtuais()
-    local stats = player:FindFirstChild("leaderstats")
-    if stats then
-        local w = stats:FindFirstChild("Wins") or stats:FindFirstChild("Vitorias") or stats:FindFirstChild("Vitórias")
-        return w and w.Value or 0
-    end
-    return 0
-end
-
-vitoriasIniciais = obterVitoriasAtuais()
-
+-- --- LÓGICA DE VITÓRIAS (ISOLADA) ---
 task.spawn(function()
-    while true do
-        local vAtual = obterVitoriasAtuais()
-        local ganhasNessaSessao = vAtual - vitoriasIniciais
-        if vitoriasLabel and vitoriasLabel.SetText then
-            vitoriasLabel:SetText("Vitórias (Sessão): " .. ganhasNessaSessao)
+    -- Função local segura
+    local function obterVitoriasAtuais()
+        local stats = player:FindFirstChild("leaderstats")
+        if stats then
+            local w = stats:FindFirstChild("Wins") or stats:FindFirstChild("Vitorias") or stats:FindFirstChild("Vitórias")
+            return w and w.Value or 0
         end
+        return 0
+    end
+
+    -- Espera carregar leaderstats para não bugar o contador inicial
+    local vitoriasIniciais = obterVitoriasAtuais()
+    
+    while true do
+        pcall(function()
+            local vAtual = obterVitoriasAtuais()
+            -- Se as vitórias iniciais forem 0 e agora temos mais, atualiza a base se necessário
+            -- (Opcional, mas ajuda se o script injetou antes do jogo carregar)
+            if vitoriasIniciais == 0 and vAtual > 100 then 
+                vitoriasIniciais = vAtual 
+            end
+
+            local ganhasNessaSessao = vAtual - vitoriasIniciais
+            if vitoriasLabel and vitoriasLabel.SetText then
+                vitoriasLabel:SetText("Vitórias (Sessão): " .. ganhasNessaSessao)
+            end
+        end)
         task.wait(1)
     end
 end)
 
+-- --- LÓGICA DE LIMPEZA ---
 local function limparMapa()
     local count = 0
     for _, obj in pairs(game.Workspace:GetDescendants()) do
@@ -49,12 +61,14 @@ local function limparMapa()
     end
 end
 
+-- --- LÓGICA DE TELEPORTE (AUTO FARM) ---
 local cachedTarget = nil
 
 task.spawn(function()
     while true do
         if tpLigado then
-            pcall(function()
+            local sucesso, erro = pcall(function()
+                -- Busca a parte se não tiver cache
                 if not cachedTarget or not cachedTarget.Parent then
                     for _, obj in pairs(game.Workspace:GetDescendants()) do
                         if obj.Name == NOME_DA_PART and obj:IsA("BasePart") then
@@ -64,32 +78,41 @@ task.spawn(function()
                     end
                 end
 
+                -- Executa o TP
                 if cachedTarget then
                     local char = player.Character
                     if char then
                         local root = char:FindFirstChild("HumanoidRootPart")
-                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        local hum = char:FindFirstChild("Humanoid")
                         
                         if root and hum and hum.Health > 0 then
+                            -- Congela a velocidade para não ser jogado longe
+                            root.Velocity = Vector3.new(0, 0, 0)
+                            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            
+                            -- Pula e TP
                             hum.Jump = true 
                             root.CFrame = cachedTarget.CFrame * CFrame.new(0, ALTURA_OFFSET, 0)
-                            root.Velocity = Vector3.new(0, 0, 0)
                         end
                     end
                 end
             end)
-            task.wait(0.1)
+            
+            -- Se tiver erro no TP, imprime no console (F9) para debug
+            if not sucesso then warn("Erro no TP:", erro) end
+            
+            task.wait(0.05) -- TP mais rápido
         else
+            cachedTarget = nil -- Limpa cache quando desliga para garantir que busque novamente se o mapa mudar
             task.wait(0.5)
         end
     end
 end)
 
+-- --- BOTÕES DA UI ---
+
 MainTab:NewToggleEntry("Auto Farm (WinPart)", "Pula e teleporta para a vitória", false, function(state)
     tpLigado = state
-    if not state then
-        cachedTarget = nil
-    end
 end)
 
 MainTab:NewToggleEntry("Anti-AFK", "Evita ser expulso por inatividade", false, function(state)
@@ -100,11 +123,12 @@ ScriptsTab:NewButtonEntry("Deletar KillBricks/Invis", "Remove as partes perigosa
     limparMapa()
 end)
 
-game.Players.LocalPlayer.Idled:Connect(function()
+-- --- ANTI-AFK ---
+player.Idled:Connect(function()
     if afkLigado then
         game:GetService("VirtualUser"):CaptureController()
         game:GetService("VirtualUser"):ClickButton2(Vector2.new())
     end
 end)
 
-print("Fih Hub Carregado!")
+print("Fih Hub Carregado e Otimizado!")
